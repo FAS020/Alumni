@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Habbo-stijl Kamer met Gecentreerde Chat Ballon</title>
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #222;
+}
+
+canvas {
+  display: block;
+  cursor: pointer;
+}
+
+/* ───────────────────────────── */
+/* Algemene knoppen */
+/* ───────────────────────────── */
+button {
+  font-family: Arial, sans-serif;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  padding: 5px 12px;
+  color: #fff;
+}
+
+/* Zoom knoppen */
+#zoomIn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #28a745;
+}
+#zoomOut {
+  position: absolute;
+  top: 10px;
+  left: 60px;
+  background: #dc3545;
+}
+#centerCam {
+  position: absolute;
+  top: 10px;
+  left: 110px;
+  background: #007bff;
+}
+
+/* ───────────────────────────── */
+/* Footer / chat input */
+/* ───────────────────────────── */
+#footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50px;
+  background: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+
+#chatInput {
+  width: 300px;
+  padding: 6px;
+  font-size: 14px;
+  border-radius: 24px;
+  border: none;
+  outline: none;
+}
+
+#charCounter {
+  color: #aaa;
+  font-size: 12px;
+  min-width: 60px;
+  text-align: right;
+}
+
+#openChatLog {
+  background: #444;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+#chatLog {
+  position: absolute;
+  bottom: 60px;
+  right: 20px;
+  width: 320px;
+  height: 400px;
+
+  background: #111;
+  color: white;
+  border: 1px solid white;
+  border-radius: 10px;
+
+  font-family: Arial;
+  font-size: 14px;
+
+  display: none;
+  overflow: hidden;
+  z-index: 20;
+}
+
+#chatLogHeader {
+  height: 36px;
+  line-height: 36px;
+  padding: 0 12px;
+
+  background: #1a1a1a;
+  border-bottom: 0px solid white;
+  border-radius: 10px 10px 0 0;
+
+  cursor: move;
+  user-select: none;
+}
+
+#chatLogContent {
+  height: calc(100% - 36px);
+  padding: 10px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+/* ───── Custom scrollbar (WebKit) ───── */
+#chatLogContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+#chatLogContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#chatLogContent::-webkit-scrollbar-thumb {
+  background: white;
+  border-radius: 6px;
+}
+
+/* Firefox */
+#chatLogContent {
+  scrollbar-width: thin;
+  scrollbar-color: white transparent;
+}
+
+</style>
+</head>
+<body>
+
+<button id="zoomIn">+</button>
+<button id="zoomOut">-</button>
+<button id="centerCam">Center</button>
+
+<div id="footer">
+
+  <input id="chatInput" type="text" placeholder="Typ hier je bericht..." />
+  <div id="charCounter">0 / 80</div>
+  <button id="openChatLog">Open Chat</button>
+</div>
+
+<div id="chatLog">
+  <div id="chatLogHeader">Chat geschiedenis</div>
+  <div id="chatLogContent"></div>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const MAX_CHARS = 80;
+const charCounter = document.getElementById("charCounter");
+
+const tileW = 64;
+const tileH = 32;
+const mapW = 25;
+const mapH = 25;
+
+// Snelheid speler FPS Hz
+let lastTime = performance.now();
+
+// Speler
+const ball = { x:0.5, y:0.5 };
+let hopOffset = 0;
+
+// Jump variables
+let jumpProgress = 0;
+let jumping = false;
+let jumpStart = {x:0, y:0};
+let jumpEnd = {x:0, y:0};
+const jumpHeight = 12;
+
+// Hover
+let hoverCell = null;
+
+// Click-to-walk
+let path = [];
+
+// Snelheid
+const speed = 0.10;
+
+// Zoom
+let scale = 1;
+const minScale = 0.3;
+const maxScale = 2;
+const zoomStep = 0.1;
+
+// Camera
+let camX = 0;
+let camY = 0;
+
+// Drag-camera
+let isDragging = false;
+let dragStart = {x:0, y:0};
+let camStart = {x:0, y:0};
+const maxTiles = 4;
+
+// Smooth center
+let camTargetX = 0;
+let camTargetY = 0;
+let camSmooth = false;
+
+// Object image
+const objectImg = new Image();
+objectImg.src = "object_template.png"; // 64x64 symmetrisch
+
+// Objecten array
+const objects = [
+    { x: 5, y: 5 } // tile coordinaten waar object staat
+];
+
+// Helper: geef de tiles van de "achterliggende driehoek" van een object
+function getTriangleBehind(obj) {
+    const x = Math.floor(obj.x);
+    const y = Math.floor(obj.y);
+
+    return [
+        {x: x,     y: y + 1},   // direct achter
+        {x: x - 1, y: y + 1},   // links achter
+        {x: x + 1, y: y + 1}    // rechts achter
+    ];
+}
+
+
+// Collision check
+function isBlocked(x, y) {
+    // Player kan niet op object tile staan
+    return objects.some(o => o.x === x && o.y === y);
+}
+
+function drawObjects() {
+    for (let obj of objects) {
+        const { sx, sy } = toScreen(obj.x, obj.y);
+
+        let alpha = 1;
+        if ((ball.x + ball.y) > (obj.x + obj.y)) alpha = 0.5;
+
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(
+        objectImg,
+        sx - 32,        // horizontaal centreren
+        sy - 64 + tileH, // verticale correctie: onderkant op tegel
+        64,
+        64
+        );
+
+        ctx.globalAlpha = 1;
+    }
+}
+
+
+// Chat
+const chatInput = document.getElementById("chatInput");
+let chatMessages = [];
+let allRoomMessages = [];
+
+const chatLog = document.getElementById("chatLog");
+const openChatLogBtn = document.getElementById("openChatLog");
+
+openChatLogBtn.addEventListener("click", () => {
+    if (chatLog.style.display === "block") {
+        chatLog.style.display = "none";
+    } else {
+        chatLog.style.display = "block";
+        chatLog.scrollTop = chatLog.scrollHeight; // naar beneden scrollen
+    }
+});
+
+
+function sendChatMessage(text, user = "Jij") {
+    const now = Date.now();
+
+    const msg = {
+        text,
+        user,
+        time: now,
+        duration: 5000,
+        currentY: undefined
+    };
+
+    chatMessages.push(msg);
+    allRoomMessages.push(msg);
+
+    updateChatLog();
+}
+
+function updateChatLog() {
+    const content = document.getElementById("chatLogContent");
+    content.innerHTML = "";
+
+    allRoomMessages.forEach(m => {
+        const time = new Date(m.time).toLocaleTimeString("nl-NL", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+        const line = document.createElement("div");
+        line.style.marginBottom = "6px";
+        line.style.wordBreak = "break-word";
+        line.innerHTML = `<span style="color:#888">[${time}]</span> <b>${m.user}:</b> ${m.text}`;
+
+        content.appendChild(line);
+    });
+
+    content.scrollTop = content.scrollHeight;
+
+}
+
+// Hulp functie: heuristiek (Manhattan afstand)
+function heuristic(a, b) {
+    return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+function findPath(start, end) {
+    const openSet = [];
+    const closedSet = new Set();
+    const cameFrom = new Map();
+
+    function nodeKey(n){ return `${n.x},${n.y}`; }
+
+    const gScore = {};
+    const fScore = {};
+
+    gScore[nodeKey(start)] = 0;
+    fScore[nodeKey(start)] = Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
+
+    openSet.push({ ...start, f: fScore[nodeKey(start)] });
+
+    while(openSet.length > 0){
+        // Kies node met laagste f
+        openSet.sort((a,b)=>a.f-b.f);
+        const current = openSet.shift();
+
+        if(current.x === end.x && current.y === end.y){
+            // Reconstruct path
+            const path = [];
+            let currKey = nodeKey(current);
+            while(cameFrom.has(currKey)){
+                path.push(cameFrom.get(currKey));
+                currKey = nodeKey(cameFrom.get(currKey));
+            }
+            path.reverse();
+
+            // Voeg het eindpunt zelf toe zodat de speler er echt naartoe gaat
+            path.push({x: end.x, y: end.y});
+
+            return path;
+        }
+
+        closedSet.add(nodeKey(current));
+
+        // buren inclusief diagonalen
+        const neighbors = [
+            {x: current.x+1, y: current.y},
+            {x: current.x-1, y: current.y},
+            {x: current.x, y: current.y+1},
+            {x: current.x, y: current.y-1},
+            {x: current.x+1, y: current.y+1},
+            {x: current.x+1, y: current.y-1},
+            {x: current.x-1, y: current.y+1},
+            {x: current.x-1, y: current.y-1}
+        ].filter(n => n.x >=0 && n.x < mapW && n.y >=0 && n.y < mapH);
+
+        for(let neighbor of neighbors){
+            const nKey = nodeKey(neighbor);
+            if(closedSet.has(nKey)) continue;
+
+            const tentativeG = gScore[nodeKey(current)] + 1;
+
+            if(!gScore.hasOwnProperty(nKey) || tentativeG < gScore[nKey]){
+                cameFrom.set(nKey, {x: current.x, y: current.y});
+                gScore[nKey] = tentativeG;
+                fScore[nKey] = tentativeG + Math.abs(neighbor.x - end.x) + Math.abs(neighbor.y - end.y);
+                if(!openSet.some(n => n.x===neighbor.x && n.y===neighbor.y)){
+                    openSet.push({ ...neighbor, f: fScore[nKey] });
+                }
+            }
+        }
+    }
+
+    // geen pad gevonden
+    return [];
+}
+
+
+
+// Tile naar scherm
+function toScreen(ix, iy) {
+    const sx = (ix - iy) * tileW/2;
+    const sy = (ix + iy) * tileH/2;
+    return {sx, sy};
+}
+
+function toTile(mx, my){
+    const cx = (mx - canvas.width/2 - camX)/scale;
+    const cy = (my - canvas.height/4 - camY)/scale;
+
+    const tyOffset = 1.5; // capsule is 1.5 tegel hoog
+    const tx = (cx/tileW + cy/tileH);
+    const ty = (cy/tileH - cx/tileW) - tyOffset + 1; // +1 zodat onderkant op tegel
+    return {x: Math.floor(tx), y: Math.floor(ty)};
+}
+
+
+
+function wrapText(text, maxWidth) {
+    const words = text.split(" ");
+    const lines = [];
+    let line = "";
+
+    for (let word of words) {
+        // Check of het woord zelf al te breed is
+        if (ctx.measureText(word).width > maxWidth) {
+            // Eerst de huidige regel opslaan
+            if (line !== "") {
+                lines.push(line);
+                line = "";
+            }
+
+            // Breek het woord op
+            let part = "";
+            for (let char of word) {
+                const test = part + char;
+                if (ctx.measureText(test + "-").width > maxWidth) {
+                    lines.push((part + "-").trim());
+                    part = char;
+                } else {
+                    part = test;
+                }
+            }
+            line = part + " ";
+        } else {
+            const testLine = line + word + " ";
+            if (ctx.measureText(testLine).width > maxWidth) {
+                lines.push(line);
+                line = word + " ";
+            } else {
+                line = testLine;
+            }
+        }
+    }
+
+    if (line.trim() !== "") lines.push(line.trim());
+    return lines;
+}
+
+
+
+function drawTiles() {
+    for (let y = 0; y < mapH; y++) {
+        for (let x = 0; x < mapW; x++) {
+            const { sx, sy } = toScreen(x, y);
+
+            // Basis tegel
+            let fill = "#444";
+            if (path.some(p => p.x === x && p.y === y)) fill = "#888";
+
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+            ctx.lineTo(sx, sy + tileH);
+            ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+            ctx.closePath();
+            ctx.fillStyle = fill;
+            ctx.fill();
+
+            // Tile nummer tekenen
+            ctx.fillStyle = "white";
+            ctx.font = "10px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            const tileNum = y * mapW + x; // nummer van 0 t/m mapW*mapH-1
+            ctx.fillText(tileNum, sx, sy + tileH / 2);
+        }
+    }
+
+    // Hover bovenop alles tekenen
+    if (hoverCell) {
+        const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+        ctx.lineTo(sx, sy + tileH);
+        ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fill();
+    }
+}
+
+
+
+
+
+function drawBall() {
+    const {sx, sy} = toScreen(ball.x, ball.y); // x,y = midden van tegel horizontaal, y = midden van tegel
+
+    const capsuleWidth = 32;
+    const capsuleHeight = 48;
+    const radius = capsuleWidth / 2;
+
+    // Onderkant capsule = tegel midden
+    const drawY = sy - hopOffset - capsuleHeight;
+
+    // Capsule speler
+    ctx.fillStyle = "red";
+    ctx.beginPath();
+    ctx.moveTo(sx - capsuleWidth/2, drawY + radius);
+    ctx.arcTo(sx - capsuleWidth/2, drawY + capsuleHeight, sx + capsuleWidth/2, drawY + capsuleHeight, radius);
+    ctx.arcTo(sx + capsuleWidth/2, drawY + capsuleHeight, sx + capsuleWidth/2, drawY, radius);
+    ctx.arcTo(sx + capsuleWidth/2, drawY, sx - capsuleWidth/2, drawY, radius);
+    ctx.arcTo(sx - capsuleWidth/2, drawY, sx - capsuleWidth/2, drawY + capsuleHeight, radius);
+    ctx.closePath();
+    ctx.fill();
+
+    // Hoed boven capsule
+    const hatWidth = 32;
+    const hatHeight = 16;
+    const capsuleTop = drawY;
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(sx, capsuleTop - hatHeight);
+    ctx.lineTo(sx - hatWidth/2, capsuleTop);
+    ctx.lineTo(sx + hatWidth/2, capsuleTop);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Achterwand
+function drawTopWall() {
+    const wallHeight = 150;
+    const topLeft = toScreen(0,0);
+    const topRight = toScreen(mapW,0);
+
+    ctx.fillStyle="#555";
+    ctx.beginPath();
+    ctx.moveTo(topLeft.sx, topLeft.sy - wallHeight);
+    ctx.lineTo(topRight.sx, topRight.sy - wallHeight);
+    ctx.lineTo(topRight.sx, topRight.sy);
+    ctx.lineTo(topLeft.sx, topLeft.sy);
+    ctx.closePath();
+    ctx.fill();
+}
+
+// Linkermuur
+function drawLeftWall() {
+    const wallHeight = 150;
+    const leftTop = toScreen(0,0);
+    const leftBottom = toScreen(0,mapH);
+
+    ctx.fillStyle="#666";
+    ctx.beginPath();
+    ctx.moveTo(leftTop.sx, leftTop.sy - wallHeight);
+    ctx.lineTo(leftBottom.sx, leftBottom.sy - wallHeight);
+    ctx.lineTo(leftBottom.sx, leftBottom.sy);
+    ctx.lineTo(leftTop.sx, leftTop.sy);
+    ctx.closePath();
+    ctx.fill();
+}
+
+let lastTypingTime = 0;
+const typingFadeStart = 3000;  // 3 seconden wachten na laatste type
+const typingFadeDuration = 1000; // fade tijd 1 seconde
+
+function getActiveBalloonCount() {
+    const now = Date.now();
+    return chatMessages.filter(
+        m => now - m.time < m.duration
+    ).length;
+}
+
+
+chatInput.addEventListener("input", () => {
+    const activeCount = getActiveBalloonCount();
+
+    // ❌ blokkeren bij 5 ballonnen
+    if (activeCount >= 5) {
+    chatInput.value = "";
+    chatInput.disabled = true;
+    chatInput.placeholder = "Even wachten...";
+    charCounter.textContent = `0 / ${MAX_CHARS}`;
+    charCounter.style.color = "#ff4d4d";
+    return;
+}
+
+
+    // ✅ weer mogen typen
+    chatInput.disabled = false;
+    chatInput.placeholder = "Typ hier je bericht...";
+    chatInput.style.color = "#000";
+
+    lastTypingTime = Date.now();
+
+    if (chatInput.value.length > MAX_CHARS) {
+        chatInput.value = chatInput.value.slice(0, MAX_CHARS);
+    }
+
+    // Update char counter
+    charCounter.textContent = `${chatInput.value.length} / ${MAX_CHARS}`;
+    charCounter.style.color = chatInput.value.length >= MAX_CHARS ? "#ff4d4d" : "#aaa";
+});
+
+
+
+
+window.addEventListener("keydown", (e) => {
+    const active = document.activeElement;
+
+    // ❌ Enter uitsluiten
+    if (
+        !["Shift", "Control", "Alt", "Meta", "Enter"].includes(e.key) &&
+        active !== chatInput
+    ) {
+        chatInput.focus();
+    }
+
+    // Enter = bericht versturen
+    if (active === chatInput && e.key === "Enter") {
+        if (chatInput.value.trim() !== "") {
+            sendChatMessage(chatInput.value.trim());
+            chatInput.value = "";
+            charCounter.textContent = `0 / ${MAX_CHARS}`;
+            charCounter.style.color = "#aaa";
+        }
+        e.preventDefault();
+    }
+});
+
+
+
+function drawChatBallon() {
+    const now = Date.now();
+
+    const paddingX = 16;
+    const paddingY = 12;
+    const maxWidth = 200;
+    const minWidth = 60;
+    const lineHeight = 18;
+    const gap = 18;
+    const fadeTime = 1000;
+    const offsetAbovePlayer = 96;
+
+    const world = toScreen(ball.x, ball.y);
+    const screenX = world.sx * scale + canvas.width / 2 + camX;
+    const screenY = world.sy * scale + canvas.height / 4 + camY - hopOffset * scale;
+
+    // ─────────────────────────────────────────────
+    // 1️⃣ actieve chatberichten
+    // ─────────────────────────────────────────────
+    const activeMessages = chatMessages.filter(
+        m => now - m.time < m.duration
+    );
+
+    // ─────────────────────────────────────────────
+    // 2️⃣ typing indicator als "virtueel bericht"
+    // ─────────────────────────────────────────────
+    const timeSinceLastType = now - lastTypingTime;
+    const typingActive =
+    lastTypingTime > 0 &&
+    chatInput.value.length > 0 &&
+    timeSinceLastType < typingFadeStart + typingFadeDuration;
+
+
+    const virtualMessages = [];
+
+    if (typingActive) {
+        virtualMessages.push({
+            text: "...",
+            isTyping: true,
+            time: lastTypingTime
+        });
+    }
+
+    // berichten + typing samenvoegen
+    const stack = [...activeMessages, ...virtualMessages];
+
+    // ─────────────────────────────────────────────
+    // 3️⃣ offsets berekenen (alles duwt elkaar omhoog)
+    // ─────────────────────────────────────────────
+    let offsets = [];
+    let totalOffset = 0;
+
+    for (let i = stack.length - 1; i >= 0; i--) {
+        const lines = wrapText(
+            stack[i].text,
+            maxWidth - paddingX * 2
+        );
+        const height = Math.ceil(lines.length * lineHeight + paddingY * 2);
+        offsets[i] = totalOffset;
+        totalOffset += height + gap + 1;
+    }
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.font = "14px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    function drawSingleBalloon(lines, offset, alpha = 1) {
+        const textWidth = Math.max(
+            ...lines.map(l => ctx.measureText(l).width)
+        );
+
+        const width = Math.max(
+            minWidth,
+            Math.min(maxWidth, textWidth + paddingX * 2)
+        );
+
+        const height = Math.ceil(lines.length * lineHeight + paddingY * 2);
+        const targetY =
+            screenY - offsetAbovePlayer - offset - height;
+
+        const r = lines.length === 1 ? height / 2 : 14;
+
+        ctx.globalAlpha = alpha;
+
+        ctx.beginPath();
+        ctx.moveTo(screenX - width / 2 + r, targetY);
+        ctx.lineTo(screenX + width / 2 - r, targetY);
+        ctx.quadraticCurveTo(
+            screenX + width / 2,
+            targetY,
+            screenX + width / 2,
+            targetY + r
+        );
+        ctx.lineTo(
+            screenX + width / 2,
+            targetY + height - r
+        );
+        ctx.quadraticCurveTo(
+            screenX + width / 2,
+            targetY + height,
+            screenX + width / 2 - r,
+            targetY + height
+        );
+        ctx.lineTo(
+            screenX - width / 2 + r,
+            targetY + height
+        );
+        ctx.quadraticCurveTo(
+            screenX - width / 2,
+            targetY + height,
+            screenX - width / 2,
+            targetY + height - r
+        );
+        ctx.lineTo(screenX - width / 2, targetY + r);
+        ctx.quadraticCurveTo(
+            screenX - width / 2,
+            targetY,
+            screenX - width / 2 + r,
+            targetY
+        );
+        ctx.closePath();
+
+        ctx.fillStyle = "white";
+        ctx.fill();
+  
+
+        lines.forEach((line, i) => {
+            ctx.fillStyle = "black";
+            ctx.fillText(
+                line,
+                screenX,
+                targetY +
+                    paddingY +
+                    lineHeight / 2 +
+                    i * lineHeight
+            );
+        });
+
+        ctx.globalAlpha = 1;
+    }
+
+    // ─────────────────────────────────────────────
+    // 4️⃣ alles tekenen
+    // ─────────────────────────────────────────────
+    stack.forEach((m, i) => {
+        let alpha = 1;
+
+        if (!m.isTyping) {
+            const age = now - m.time;
+            if (age > m.duration - fadeTime) {
+                alpha =
+                    1 -
+                    (age - (m.duration - fadeTime)) /
+                        fadeTime;
+            }
+        } else {
+            if (timeSinceLastType > typingFadeStart) {
+                alpha =
+                    1 -
+                    (timeSinceLastType -
+                        typingFadeStart) /
+                        typingFadeDuration;
+            }
+        }
+
+        const lines = wrapText(
+            m.text,
+            maxWidth - paddingX * 2
+        );
+
+        drawSingleBalloon(lines, offsets[i], alpha);
+    });
+
+    ctx.restore();
+}
+
+
+// Event listeners
+canvas.addEventListener("mousemove", e=>{
+    const {x, y} = toTile(e.clientX, e.clientY);
+    hoverCell = (x>=0 && x<mapW && y>=0 && y<mapH) ? {x,y} : null;
+
+    if(isDragging){
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+
+        camX = camStart.x + dx;
+        camY = camStart.y + dy;
+
+        const camMinX = -tileW/2 - maxTiles*tileW;
+        const camMaxX = mapW*tileW/2 + maxTiles*tileW;
+        const camMinY = -tileH/2 - maxTiles*tileH;
+        const camMaxY = mapH*tileH/2 + maxTiles*tileH;
+
+        camX = Math.max(camMinX, Math.min(camX, camMaxX));
+        camY = Math.max(camMinY, Math.min(camY, camMaxY));
+    }
+});
+
+canvas.addEventListener("mousedown", e=>{
+    dragStart.x = e.clientX;
+    dragStart.y = e.clientY;
+    camStart.x = camX;
+    camStart.y = camY;
+    isDragging = true;
+    camSmooth = false;
+});
+
+canvas.addEventListener("mouseup", e => {
+    if(!isDragging) return;
+
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+
+    if(Math.sqrt(dx*dx + dy*dy) < 2){
+        const {x, y} = toTile(e.clientX, e.clientY);
+        if(x >= 0 && x < mapW && y >= 0 && y < mapH && !isBlocked(x, y)){
+            const startTile = { x: Math.floor(ball.x), y: Math.floor(ball.y) };
+            path = findPath(startTile, { x, y });
+
+            if(!jumping && path.length > 0){
+                jumpStart = { x: ball.x, y: ball.y }; // voet als start
+                const next = path.shift();
+                jumpEnd = { x: next.x + 0.5, y: next.y + 0.5 }; // voet op midden tegel
+                jumpProgress = 0;
+                jumping = true;
+            }
+        }
+    }
+
+    isDragging = false;
+});
+
+canvas.addEventListener("mouseleave", e=> isDragging = false);
+
+// Zoom knoppen
+document.getElementById("zoomIn").addEventListener("click", ()=> {
+    scale += zoomStep; if(scale > maxScale) scale = maxScale;
+});
+document.getElementById("zoomOut").addEventListener("click", ()=> {
+    scale -= zoomStep; if(scale < minScale) scale = minScale;
+});
+
+// Center knop
+document.getElementById("centerCam").addEventListener("click", ()=>{
+    camTargetX = 0;
+    camTargetY = 0;
+    camSmooth = true;
+});
+
+function updateCamera(delta){
+    if(!camSmooth) return;
+    let dx = camTargetX - camX;
+    let dy = camTargetY - camY;
+    let distance = Math.sqrt(dx*dx + dy*dy);
+    let t = Math.min(0.08 * delta, distance * 0.01);
+    camX += dx * t;
+    camY += dy * t;
+    if(distance < 0.3){ camX = camTargetX; camY = camTargetY; camSmooth = false; }
+}
+
+function updateBall(delta) {
+    if(!jumping && path.length > 0){
+        // start van midden van tegel horizontaal, onderkant verticaal
+        jumpStart = { 
+            x: Math.floor(ball.x) + 0.5, 
+            y: Math.floor(ball.y) + 0.5 // onderkant op tegel
+        };
+        const next = path.shift();
+        jumpEnd = { 
+            x: next.x + 0.5, 
+            y: next.y + 0.5 
+        };
+        jumpProgress = 0;
+        jumping = true;
+    }
+
+    if(jumping){
+        jumpProgress += 0.05 * delta;
+        if(jumpProgress >= 1){
+            jumpProgress = 1;
+            ball.x = jumpEnd.x;
+            ball.y = jumpEnd.y;
+            jumping = false;
+            hopOffset = 0;
+
+            if(path.length > 0){
+                jumpStart = { x: ball.x, y: ball.y };
+                const next = path.shift();
+                jumpEnd = { x: next.x + 0.5, y: next.y + 0.5 };
+                jumpProgress = 0;
+                jumping = true;
+            }
+        } else {
+            // interpolatie
+            ball.x = jumpStart.x + (jumpEnd.x - jumpStart.x) * jumpProgress;
+            ball.y = jumpStart.y + (jumpEnd.y - jumpStart.y) * jumpProgress;
+            hopOffset = jumpHeight * 4 * jumpProgress * (1 - jumpProgress);
+        }
+    } else hopOffset = 0;
+}
+
+let isDraggingChat = false;
+let dragStartChat = {x:0, y:0};
+let chatStartPos = {x:0, y:0};
+
+chatLog.addEventListener("mousedown", (e) => {
+    isDraggingChat = true;
+    dragStartChat = {x: e.clientX, y: e.clientY};
+    const rect = chatLog.getBoundingClientRect();
+    chatStartPos = {x: rect.left, y: rect.top};
+    e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+    if (!isDraggingChat) return;
+
+    const dx = e.clientX - dragStartChat.x;
+    const dy = e.clientY - dragStartChat.y;
+
+    const newX = chatStartPos.x + dx;
+    const newY = chatStartPos.y + dy;
+
+    const rect = chatLog.getBoundingClientRect();
+
+    const minX = 0;
+    const minY = 0;
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+
+    chatLog.style.left = Math.max(minX, Math.min(newX, maxX)) + "px";
+    chatLog.style.top  = Math.max(minY, Math.min(newY, maxY)) + "px";
+});
+
+
+window.addEventListener("mouseup", () => {
+    isDraggingChat = false;
+});
+
+setInterval(() => {
+    const active = chatMessages
+        .filter(m => Date.now() - m.time < m.duration)
+        .sort((a, b) => a.time - b.time);
+
+    if (active.length >= 5) {
+        const oldest = active[0];
+        const remaining =
+            Math.max(
+                0,
+                Math.ceil((oldest.duration - (Date.now() - oldest.time)) / 1000)
+            );
+
+        chatInput.disabled = true;
+        chatInput.value = "";
+        chatInput.placeholder = `Even wachten (${remaining}s)`;
+        chatInput.style.color = "#ff4d4d";
+    } else {
+        chatInput.disabled = false;
+        chatInput.placeholder = "Typ hier je bericht...";
+        chatInput.style.color = "#000";
+    }
+}, 250);
+
+
+
+
+
+// Grijze tile genereren en downloaden
+function exportGrayTile() {
+    const canvasTile = document.createElement("canvas");
+    canvasTile.width = 64;  // breedte tile
+    canvasTile.height = 32; // hoogte tile
+    const ctxTile = canvasTile.getContext("2d");
+
+    // Lichtgrijze tile tekenen
+    ctxTile.fillStyle = "#888";
+    ctxTile.beginPath();
+    ctxTile.moveTo(32, 0);
+    ctxTile.lineTo(64, 16);
+    ctxTile.lineTo(32, 32);
+    ctxTile.lineTo(0, 16);
+    ctxTile.closePath();
+    ctxTile.fill();
+
+    // Downloaden
+    const link = document.createElement("a");
+    link.download = "tile_template.png";
+    link.href = canvasTile.toDataURL();
+    link.click();
+}
+
+// Event listener toevoegen (bijvoorbeeld een knop)
+const exportBtn = document.createElement("button");
+exportBtn.textContent = "Exporteer tile template";
+exportBtn.style.position = "absolute";
+exportBtn.style.top = "50px";
+exportBtn.style.left = "10px";
+exportBtn.style.padding = "5px 10px";
+exportBtn.style.background = "#444";
+exportBtn.style.color = "white";
+exportBtn.style.border = "none";
+exportBtn.style.borderRadius = "6px";
+document.body.appendChild(exportBtn);
+
+exportBtn.addEventListener("click", exportGrayTile);
+
+
+
+
+
+
+function loop(time) {
+    const delta = (time - lastTime) / 16.666; // 60fps = 1
+    lastTime = time;
+
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    ctx.setTransform(
+        scale, 0, 0, scale,
+        canvas.width / 2 + camX,
+        canvas.height / 4 + camY
+    );
+
+    drawTiles();
+    drawTopWall();
+    drawLeftWall();
+    updateBall(delta); // delta meegeven
+
+    // ────────────── Dieptegesorteerde renderlijst ──────────────
+    let renderList = [];
+
+    // Voeg objecten en speler op juiste diepte toe
+    for (let obj of objects) {
+        // Driehoek achter object
+        const behindTiles = [
+            { x: obj.x - 1, y: obj.y - 1 }, // links-achter
+            { x: obj.x,     y: obj.y - 1 }, // direct achter
+            { x: obj.x + 1, y: obj.y - 1 }  // rechts-achter
+        ];
+
+        // Check of speler op een van deze tiles staat
+        const playerBehind = behindTiles.some(
+            t => Math.floor(ball.x) === t.x && Math.floor(ball.y) === t.y
+        );
+
+        // Voeg object toe met transparantie als speler erachter staat
+        renderList.push({
+            type: "object",
+            x: obj.x,
+            y: obj.y,
+            draw: () => {
+                const { sx, sy } = toScreen(obj.x, obj.y);
+                ctx.globalAlpha = playerBehind ? 0.5 : 1;
+                ctx.drawImage(objectImg, sx - 32, sy - 64 + tileH, 64, 64);
+                ctx.globalAlpha = 1;
+            }
+        });
+
+        // Voeg speler toe vóór object als hij erachter staat
+        if (playerBehind) {
+            renderList.push({
+                type: "player",
+                x: ball.x,
+                y: ball.y,
+                draw: () => drawBall()
+            });
+        }
+    }
+
+    // Als speler niet achter een object staat, voeg speler gewoon toe
+    if (!renderList.some(i => i.type === "player")) {
+        renderList.push({
+            type: "player",
+            x: ball.x,
+            y: ball.y,
+            draw: () => drawBall()
+        });
+    }
+
+    // Sorteer op x+y voor isometrische diepte
+    renderList.sort((a,b) => (a.x + a.y) - (b.x + b.y));
+
+    // Alles tekenen
+    for (let item of renderList) {
+        item.draw();
+    }
+    // ────────────── Einde renderlijst ──────────────
+
+    drawChatBallon();
+    updateCamera(delta); // delta meegeven
+
+    requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+
+
+
+
+
+</script>
+</body>
+</html>
