@@ -60,8 +60,9 @@ button {
   background: black;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between; /* Ruimte tussen de groepen */
+  padding: 0 20px; /* Wat ruimte aan de zijkanten */
+  box-sizing: border-box;
 }
 
 
@@ -81,6 +82,13 @@ button {
   text-align: right;
 }
 
+/* Nieuwe container voor de hele chat-groep */
+.chat-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
 #openChatLog {
   background: #444;
   height: 32px;
@@ -88,6 +96,56 @@ button {
   font-size: 14px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+/* ───────────────────────────── */
+/* Bouwmenu */
+/* ───────────────────────────── */
+#buildMenu {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(17, 17, 17, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  padding: 10px;
+  display: none; /* Standaard verborgen */
+  z-index: 20;
+}
+
+#buildMenuContent {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.build-item {
+  background: #444;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: white;
+  font-size: 12px;
+}
+
+.build-item:hover {
+  background: #555;
+}
+
+.build-item.selected {
+  border-color: #007bff;
+}
+
+.build-item img {
+  height: 64px; /* Vaste hoogte voor consistentie */
 }
 
 #chatLog {
@@ -159,9 +217,22 @@ button {
 
 <div id="footer">
 
-  <input id="chatInput" type="text" placeholder="Typ hier je bericht..." />
-  <div id="charCounter">0 / 80</div>
-  <button id="openChatLog">Open Chat</button>
+  <button id="buildBtn">Bouwen</button>
+
+  <div class="chat-group">
+    <input id="chatInput" type="text" placeholder="Typ hier je bericht..." />
+    <div id="charCounter">0 / 80</div>
+    <button id="openChatLog">Open Chat</button>
+  </div>
+
+  <div></div> <!-- Leeg element voor balans -->
+
+</div>
+
+<div id="buildMenu">
+  <div id="buildMenuContent">
+    <!-- Items worden hier dynamisch toegevoegd -->
+  </div>
 </div>
 
 <div id="chatLog">
@@ -172,6 +243,7 @@ button {
 <canvas id="canvas"></canvas>
 
 <script>
+(function() { // Start van de IIFE
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
@@ -209,10 +281,9 @@ let path = [];
 const speed = 0.10;
 
 // Zoom
-let scale = 1;
-const minScale = 0.3;
-const maxScale = 2;
-const zoomStep = 0.1;
+const zoomLevels = [0.8, 0.9, 1.0, 1.2, 1.4]; // Fijnere zoom-stappen
+let currentZoomIndex = 2; // Start op neutraal niveau (1.0)
+let scale = zoomLevels[currentZoomIndex];
 
 // Camera
 let camX = 0;
@@ -229,13 +300,25 @@ let camTargetX = 0;
 let camTargetY = 0;
 let camSmooth = false;
 
+// Bouwmodus
+let isBuildMode = false;
+let selectedBuildObject = null;
+
 // Object image
 const objectImg = new Image();
 objectImg.src = "object_template.png"; // 64x64 symmetrisch
+const objectImg96 = new Image();
+objectImg96.src = "object_template_96.png"; // 64x96 symmetrisch
 
 // Objecten array
 const objects = [
-    { x: 5, y: 5 } // tile coordinaten waar object staat
+    { x: 5, y: 5, height: 1 },   // Normaal object
+    { x: 10, y: 10, height: 2 }, // Hoog object
+    // Extra willekeurige objecten voor testdoeleinden
+    { x: 15, y: 8, height: 1 },
+    { x: 3, y: 18, height: 2 },
+    { x: 20, y: 20, height: 1 },
+    { x: 18, y: 3, height: 2 }
 ];
 
 // Helper: geef de tiles van de "achterliggende driehoek" van een object
@@ -257,25 +340,51 @@ function isBlocked(x, y) {
     return objects.some(o => o.x === x && o.y === y);
 }
 
-function drawObjects() {
-    for (let obj of objects) {
-        const { sx, sy } = toScreen(obj.x, obj.y);
+// Bouwmodus logica
+const buildBtn = document.getElementById("buildBtn");
+const buildMenu = document.getElementById("buildMenu");
+const buildMenuContent = document.getElementById("buildMenuContent");
 
-        let alpha = 1;
-        if ((ball.x + ball.y) > (obj.x + obj.y)) alpha = 0.5;
+const buildableObjects = [
+    { name: "Blok", height: 1, image: objectImg.src },
+    { name: "Hoge Blok", height: 2, image: objectImg96.src }
+];
 
-        ctx.globalAlpha = alpha;
-        ctx.drawImage(
-        objectImg,
-        sx - 32,        // horizontaal centreren
-        sy - 64 + tileH, // verticale correctie: onderkant op tegel
-        64,
-        64
-        );
+buildableObjects.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "build-item";
+    div.innerHTML = `<img src="${item.image}" alt="${item.name}">${item.name}`;
+    div.onclick = () => {
+        // Deselecteer als het al geselecteerd was
+        if (selectedBuildObject && selectedBuildObject.name === item.name) {
+            selectedBuildObject = null;
+            div.classList.remove("selected");
+        } else {
+            // Deselecteer andere items
+            document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
+            // Selecteer dit item
+            selectedBuildObject = item;
+            div.classList.add("selected");
+        }
+    };
+    buildMenuContent.appendChild(div);
+});
 
-        ctx.globalAlpha = 1;
+buildBtn.addEventListener("click", () => {
+    isBuildMode = !isBuildMode;
+    if (isBuildMode) {
+        buildMenu.style.display = "block";
+    } else {
+        buildMenu.style.display = "none";
+        // Deselecteer alles bij sluiten
+        selectedBuildObject = null;
+        document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
     }
-}
+});
+
+
+
+
 
 
 // Chat
@@ -345,6 +454,7 @@ function findPath(start, end) {
     const closedSet = new Set();
     const cameFrom = new Map();
 
+
     function nodeKey(n){ return `${n.x},${n.y}`; }
 
     const gScore = {};
@@ -354,7 +464,7 @@ function findPath(start, end) {
     fScore[nodeKey(start)] = Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
 
     openSet.push({ ...start, f: fScore[nodeKey(start)] });
-
+    
     while(openSet.length > 0){
         // Kies node met laagste f
         openSet.sort((a,b)=>a.f-b.f);
@@ -384,7 +494,7 @@ function findPath(start, end) {
             {x: current.x-1, y: current.y},
             {x: current.x, y: current.y+1},
             {x: current.x, y: current.y-1},
-            {x: current.x+1, y: current.y+1},
+            {x: current.x+1, y: current.y+1}, 
             {x: current.x+1, y: current.y-1},
             {x: current.x-1, y: current.y+1},
             {x: current.x-1, y: current.y-1}
@@ -393,6 +503,7 @@ function findPath(start, end) {
         for(let neighbor of neighbors){
             const nKey = nodeKey(neighbor);
             if(closedSet.has(nKey)) continue;
+            if(isBlocked(neighbor.x, neighbor.y)) continue;
 
             const tentativeG = gScore[nodeKey(current)] + 1;
 
@@ -432,7 +543,7 @@ function toTile(mx, my){
 
 
 
-function wrapText(text, maxWidth) {
+function wrapText(text, maxWidth) {    
     const words = text.split(" ");
     const lines = [];
     let line = "";
@@ -457,11 +568,12 @@ function wrapText(text, maxWidth) {
                     part = test;
                 }
             }
-            line = part + " ";
+            line = part; // Het resterende deel wordt de nieuwe regel
         } else {
             const testLine = line + word + " ";
             if (ctx.measureText(testLine).width > maxWidth) {
-                lines.push(line);
+                // Voeg de vorige regel toe, maar alleen als deze niet leeg is
+                if (line.trim() !== "") lines.push(line.trim());
                 line = word + " ";
             } else {
                 line = testLine;
@@ -469,6 +581,7 @@ function wrapText(text, maxWidth) {
         }
     }
 
+    // Voeg de allerlaatste regel toe, maar alleen als deze niet leeg is
     if (line.trim() !== "") lines.push(line.trim());
     return lines;
 }
@@ -513,6 +626,23 @@ function drawTiles() {
         ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
         ctx.closePath();
         ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fill();
+    }
+
+    // Bouwmodus hover
+    if (selectedBuildObject && hoverCell) {
+        const playerOnTile = Math.floor(ball.x) === hoverCell.x && Math.floor(ball.y) === hoverCell.y;
+        const isOccupied = isBlocked(hoverCell.x, hoverCell.y);
+        const isValidPlacement = !isOccupied && !playerOnTile;
+
+        const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+        ctx.lineTo(sx, sy + tileH);
+        ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+        ctx.closePath();
+        ctx.fillStyle = isValidPlacement ? "rgba(0, 255, 0, 0.5)" : "rgba(255, 0, 0, 0.5)";
         ctx.fill();
     }
 }
@@ -608,7 +738,6 @@ chatInput.addEventListener("input", () => {
     chatInput.disabled = true;
     chatInput.placeholder = "Even wachten...";
     charCounter.textContent = `0 / ${MAX_CHARS}`;
-    charCounter.style.color = "#ff4d4d";
     return;
 }
 
@@ -714,9 +843,9 @@ function drawChatBallon() {
             stack[i].text,
             maxWidth - paddingX * 2
         );
-        const height = Math.ceil(lines.length * lineHeight + paddingY * 2);
+        const height = lines.length * lineHeight + paddingY * 2;
         offsets[i] = totalOffset;
-        totalOffset += height + gap + 1;
+        totalOffset += height + gap;
     }
 
     ctx.save();
@@ -735,7 +864,7 @@ function drawChatBallon() {
             Math.min(maxWidth, textWidth + paddingX * 2)
         );
 
-        const height = Math.ceil(lines.length * lineHeight + paddingY * 2);
+        const height = lines.length * lineHeight + paddingY * 2;
         const targetY =
             screenY - offsetAbovePlayer - offset - height;
 
@@ -844,17 +973,9 @@ canvas.addEventListener("mousemove", e=>{
     if(isDragging){
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
-
+        
         camX = camStart.x + dx;
         camY = camStart.y + dy;
-
-        const camMinX = -tileW/2 - maxTiles*tileW;
-        const camMaxX = mapW*tileW/2 + maxTiles*tileW;
-        const camMinY = -tileH/2 - maxTiles*tileH;
-        const camMaxY = mapH*tileH/2 + maxTiles*tileH;
-
-        camX = Math.max(camMinX, Math.min(camX, camMaxX));
-        camY = Math.max(camMinY, Math.min(camY, camMaxY));
     }
 });
 
@@ -872,6 +993,20 @@ canvas.addEventListener("mouseup", e => {
 
     const dx = e.clientX - dragStart.x;
     const dy = e.clientY - dragStart.y;
+
+    // Als we in bouwmodus zijn, plaats het object
+    if (selectedBuildObject && Math.sqrt(dx*dx + dy*dy) < 2) {
+        const {x, y} = toTile(e.clientX, e.clientY);
+        const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
+        const isOccupied = isBlocked(x, y);
+
+        if (x >= 0 && x < mapW && y >= 0 && y < mapH && !isOccupied && !playerOnTile) {
+            objects.push({ x: x, y: y, height: selectedBuildObject.height });
+        }
+        isDragging = false;
+        return; // Stop verdere uitvoering om niet ook te lopen
+    }
+
 
     if(Math.sqrt(dx*dx + dy*dy) < 2){
         const {x, y} = toTile(e.clientX, e.clientY);
@@ -896,31 +1031,56 @@ canvas.addEventListener("mouseleave", e=> isDragging = false);
 
 // Zoom knoppen
 document.getElementById("zoomIn").addEventListener("click", ()=> {
-    scale += zoomStep; if(scale > maxScale) scale = maxScale;
+    if (currentZoomIndex < zoomLevels.length - 1) {
+        currentZoomIndex++;
+        scale = zoomLevels[currentZoomIndex];
+    }
 });
 document.getElementById("zoomOut").addEventListener("click", ()=> {
-    scale -= zoomStep; if(scale < minScale) scale = minScale;
+    if (currentZoomIndex > 0) {
+        currentZoomIndex--;
+        scale = zoomLevels[currentZoomIndex];
+    }
 });
+
+let scaleTarget = 1; // Definieer scaleTarget buiten de center knop
 
 // Center knop
 document.getElementById("centerCam").addEventListener("click", ()=>{
     camTargetX = 0;
     camTargetY = 0;
+    currentZoomIndex = 2; // Index voor neutraal zoomlevel (1.0)
+    scaleTarget = zoomLevels[currentZoomIndex];
     camSmooth = true;
 });
 
 function updateCamera(delta){
-    if(!camSmooth) return;
-    let dx = camTargetX - camX;
+    if(!camSmooth || delta === 0) return;
+    let dx = camTargetX - camX; 
     let dy = camTargetY - camY;
     let distance = Math.sqrt(dx*dx + dy*dy);
     let t = Math.min(0.08 * delta, distance * 0.01);
     camX += dx * t;
     camY += dy * t;
-    if(distance < 0.3){ camX = camTargetX; camY = camTargetY; camSmooth = false; }
+
+    // Smooth zoom
+    let ds = scaleTarget - scale;
+    scale += ds * 0.08 * delta;
+
+    if(distance < 0.3 && Math.abs(ds) < 0.01){ 
+        camX = camTargetX; 
+        camY = camTargetY; 
+        scale = scaleTarget; 
+        currentZoomIndex = zoomLevels.indexOf(scaleTarget); // Synchroniseer de index
+        camSmooth = false; 
+    }
 }
 
 function updateBall(delta) {
+    // Snelheid van de sprong per seconde
+    const jumpSpeed = 3; // 3 tiles per second
+
+
     if(!jumping && path.length > 0){
         // start van midden van tegel horizontaal, onderkant verticaal
         jumpStart = { 
@@ -937,7 +1097,7 @@ function updateBall(delta) {
     }
 
     if(jumping){
-        jumpProgress += 0.05 * delta;
+        jumpProgress += jumpSpeed / 60 * delta; // /60 omdat de oude snelheid 0.05 was (1/20)
         if(jumpProgress >= 1){
             jumpProgress = 1;
             ball.x = jumpEnd.x;
@@ -1014,7 +1174,6 @@ setInterval(() => {
         chatInput.disabled = true;
         chatInput.value = "";
         chatInput.placeholder = `Even wachten (${remaining}s)`;
-        chatInput.style.color = "#ff4d4d";
     } else {
         chatInput.disabled = false;
         chatInput.placeholder = "Typ hier je bericht...";
@@ -1070,8 +1229,12 @@ exportBtn.addEventListener("click", exportGrayTile);
 
 
 
+
+
 function loop(time) {
-    const delta = (time - lastTime) / 16.666; // 60fps = 1
+    // Bereken delta in fractie van een 60fps frame voor compatibiliteit
+    const deltaTime = time - lastTime;
+    const delta = deltaTime / (1000 / 60); // delta is ~1.0 bij 60fps
     lastTime = time;
 
     ctx.setTransform(1,0,0,1,0,0);
@@ -1088,57 +1251,64 @@ function loop(time) {
     drawLeftWall();
     updateBall(delta); // delta meegeven
 
-    // ────────────── Dieptegesorteerde renderlijst ──────────────
-    let renderList = [];
+    // --- Dieptegesorteerde renderlijst ---
+    const renderList = [];
+    let playerAdded = false;
+    const playerTileX = Math.floor(ball.x);
+    const playerTileY = Math.floor(ball.y);
 
-    // Voeg objecten en speler op juiste diepte toe
-    for (let obj of objects) {
-        // Driehoek achter object
-        const behindTiles = [
-            { x: obj.x - 1, y: obj.y - 1 }, // links-achter
-            { x: obj.x,     y: obj.y - 1 }, // direct achter
-            { x: obj.x + 1, y: obj.y - 1 }  // rechts-achter
+    // Voeg objecten toe aan de renderlijst
+    objects.forEach(obj => {
+        // De 3 tegels achter het object waar de speler "achter" het object zou staan
+        let behindTiles = [
+            { x: obj.x, y: obj.y - 1 },     // Direct achter (boven)
+            { x: obj.x - 1, y: obj.y },     // Links-achter
+            { x: obj.x - 1, y: obj.y - 1 }  // Links-boven-achter
         ];
 
-        // Check of speler op een van deze tiles staat
-        const playerBehind = behindTiles.some(
-            t => Math.floor(ball.x) === t.x && Math.floor(ball.y) === t.y
-        );
+        // Voor hoge objecten, voeg een extra rij tegels toe
+        if (obj.height === 2) {
+            behindTiles.push({ x: obj.x - 1, y: obj.y - 2 }); // Twee boven, een links (209)
+            behindTiles.push({ x: obj.x - 2, y: obj.y - 2 }); // Twee boven, twee links (208)
+            behindTiles.push({ x: obj.x - 2, y: obj.y - 1 }); // Een boven, twee links (233)
+        }
 
-        // Voeg object toe met transparantie als speler erachter staat
+        const isPlayerBehind = behindTiles.some(t => playerTileX === t.x && playerTileY === t.y);
+
+        // Voeg het object toe aan de lijst
         renderList.push({
-            type: "object",
+            type: 'object',
             x: obj.x,
             y: obj.y,
             draw: () => {
                 const { sx, sy } = toScreen(obj.x, obj.y);
-                ctx.globalAlpha = playerBehind ? 0.5 : 1;
-                ctx.drawImage(objectImg, sx - 32, sy - 64 + tileH, 64, 64);
+                // Maak object transparant als de speler erachter staat
+                ctx.globalAlpha = isPlayerBehind ? 0.5 : 1;
+
+                const isTall = obj.height === 2;
+                const img = isTall ? objectImg96 : objectImg;
+                const imgHeight = isTall ? 96 : 64;
+
+                ctx.drawImage(
+                    img,
+                    sx - 32, // horizontaal centreren
+                    sy - imgHeight + tileH, // verticale correctie
+                    64,
+                    imgHeight
+                );
                 ctx.globalAlpha = 1;
             }
         });
+    });
 
-        // Voeg speler toe vóór object als hij erachter staat
-        if (playerBehind) {
-            renderList.push({
-                type: "player",
-                x: ball.x,
-                y: ball.y,
-                draw: () => drawBall()
-            });
-        }
-    }
-
-    // Als speler niet achter een object staat, voeg speler gewoon toe
-    if (!renderList.some(i => i.type === "player")) {
-        renderList.push({
-            type: "player",
-            x: ball.x,
-            y: ball.y,
-            draw: () => drawBall()
-        });
-    }
-
+    // Voeg de speler toe aan de renderlijst
+    renderList.push({
+        type: 'player',
+        x: playerTileX, // Gebruik de tegelcoördinaat voor correcte sortering
+        y: playerTileY, // Gebruik de tegelcoördinaat voor correcte sortering
+        draw: drawBall
+    });
+    
     // Sorteer op x+y voor isometrische diepte
     renderList.sort((a,b) => (a.x + a.y) - (b.x + b.y));
 
@@ -1146,7 +1316,7 @@ function loop(time) {
     for (let item of renderList) {
         item.draw();
     }
-    // ────────────── Einde renderlijst ──────────────
+    // --- Einde renderlijst ---
 
     drawChatBallon();
     updateCamera(delta); // delta meegeven
@@ -1156,9 +1326,7 @@ function loop(time) {
 
 requestAnimationFrame(loop);
 
-
-
-
+})(); // Einde van de IIFE
 
 </script>
 </body>
