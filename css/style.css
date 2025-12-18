@@ -1,0 +1,475 @@
+html,
+body {
+	margin: 0;
+	padding: 0;
+	overflow: hidden;
+	background: #222;
+}
+
+canvas {
+	display: block;
+	cursor: pointer;
+}
+
+/* ───────────────────────────── */
+/* Algemene knoppen */
+/* ───────────────────────────── */
+button {
+	font-family: Arial, sans-serif;
+	cursor: pointer;
+	border: none;
+	border-radius: 6px;
+	padding: 5px 12px;
+	color: #fff;
+}
+
+/* Zoom knoppen */
+#zoomIn {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	background: #28a745;
+}
+#zoomOut {
+	position: absolute;
+	top: 10px;
+	left: 60px;
+	background: #dc3545;
+}
+#centerCam {
+	position: absolute;
+	top: 10px;
+	left: 110px;
+	background: #007bff;
+}
+
+/* ───────────────────────────── */
+/* Footer / chat input */
+/* ───────────────────────────── */
+#footer {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 50px;
+	background: rgba(0, 0, 0, 0.85);
+	display: flex;
+	align-items: center;
+	justify-content: center; /* Centreer de chat-groep */
+	padding: 0 20px; /* Wat ruimte aan de zijkanten */
+	box-sizing: border-box;
+}
+
+.footer-left,
+.footer-right {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	display: flex;
+	gap: 10px;
+	width: 250px; /* Vaste breedte om de chat-input niet te verstoren */
+}
+
+.footer-left {
+	left: 20px;
+}
+.footer-right {
+	right: 20px;
+	justify-content: flex-end;
+}
+
+#chatInput {
+	width: 300px;
+	padding: 6px;
+	font-size: 14px;
+	border-radius: 24px;
+	border: none;
+	outline: none;
+}
+
+#charCounter {
+	color: #aaa;
+	font-size: 12px;
+	font-family: Arial, sans-serif;
+	min-width: 60px;
+	text-align: left;
+}
+
+/* Nieuwe container voor de hele chat-groep */
+.chat-group {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+#openChatLog {
+	background: #444;
+	height: 32px;
+	padding: 0 10px;
+	font-size: 14px;
+	border-radius: 6px;
+	cursor: pointer;
+}
+
+/* ───────────────────────────── */
+/* Bouwmenu */
+/* ───────────────────────────── */
+#buildMenu {
+	position: absolute; /* Nodig voor verplaatsen */
+	left: 40px;
+	top: 80px;
+	/* 60px voor categorieën + 450px voor content */
+	width: 510px;
+	height: 470px; /* Iets hoger gemaakt voor de color picker */
+	background: rgba(17, 17, 17, 0.85);
+	border: 1px solid rgba(255, 255, 255, 0.85);
+	border-radius: 10px;
+	display: none; /* Start verborgen, wordt 'flex' in JS */
+	z-index: 20;
+	overflow: hidden; /* Zorgt dat content binnen de afgeronde hoeken blijft */
+	flex-direction: row; /* Categorieën links, content rechts */
+}
+
+#buildCategoryMenu {
+	width: 60px;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.2);
+	border-right: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 10px;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	align-items: center; /* Centreer items voor vierkante knoppen */
+}
+
+.category-btn {
+	width: 100%;
+	height: 40px;
+	background: #333;
+	border: 2px solid #555;
+	border-radius: 4px;
+	font-size: 20px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.category-btn.selected {
+	border-color: white;
+}
+
+#buildMainContent {
+	width: 450px;
+}
+
+#objectCategoryView {
+	display: flex; /* Standaard zichtbaar */
+	flex-direction: column;
+	height: 100%;
+}
+
+#colorCategoryView {
+	display: none; /* Standaard verborgen */
+	box-sizing: border-box;
+	height: calc(100% - 36px); /* Volledige hoogte minus de header */
+	display: flex;
+	flex-direction: row;
+}
+
+#objectSubCategoryMenu {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 60px;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.2);
+	border-right: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 10px;
+	box-sizing: border-box;
+}
+
+#colorTools {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 60px;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.2);
+	border-right: 1px solid rgba(255, 255, 255, 0.2);
+	padding: 10px;
+	box-sizing: border-box;
+}
+
+#colorPickerWrapper {
+	flex-grow: 1;
+	padding: 10px;
+	display: flex;
+	flex-direction: column; /* Zorgt ervoor dat de color picker en details onder elkaar staan */
+	justify-content: center;
+	align-items: center;
+}
+
+#colorPicker {
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+	-webkit-color-swatch-wrapper {
+		padding: 0;
+	} /* Webkit specifieke styling */
+	border: none;
+	background: none;
+}
+
+#colorDetails {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-top: 10px;
+}
+
+#colorPreview {
+	width: 40px;
+	height: 40px;
+	border: 1px solid #fff;
+	border-radius: 4px;
+}
+
+#hexInput {
+	width: 100px;
+	padding: 8px;
+	background: #222;
+	border: 1px solid #555;
+	border-radius: 4px;
+	color: #fff;
+	font-family: monospace;
+	font-size: 14px;
+}
+
+#buildTools {
+	padding: 5px 10px; /* Minder verticale padding */
+	/* border-top is nu border-bottom op de header */
+	display: flex;
+	gap: 10px;
+	justify-content: flex-end; /* Lijn knoppen rechts uit */
+	background: rgba(0, 0, 0, 0.1); /* Lichte achtergrond voor contrast */
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Scheidingslijn */
+}
+
+.tool-btn {
+	width: 40px; /* Vaste breedte */
+	height: 40px; /* Vaste hoogte */
+	padding: 0; /* Geen extra padding */
+	background: #333;
+	border: 2px solid #555;
+	color: white;
+	cursor: pointer;
+	border-radius: 4px;
+	font-size: 20px; /* Grotere emoji */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.tool-btn.selected {
+	background: #007bff;
+	border-color: white;
+}
+
+#buildMenuHeader {
+	height: 36px;
+	line-height: 36px;
+	padding: 0 12px;
+	background: #1a1a1a;
+	border-radius: 10px 10px 0 0;
+	cursor: move;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Scheidingslijn */
+	user-select: none;
+	color: white;
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+}
+
+#buildMenuContent {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr); /* Forceer 3 kolommen die de ruimte vullen */
+	gap: 10px;
+	padding: 10px; /* Padding voor de content zelf */
+	height: calc(100% - 51px); /* Hoogte minus de dunnere #buildTools balk (50px + 1px border) */
+	overflow-y: auto;
+	box-sizing: border-box;
+	justify-items: center; /* Centreer items binnen hun grid cel */
+	align-items: start; /* Items bovenaan beginnen in hun cell */
+}
+
+.build-item {
+	background: rgba(0, 0, 0, 0.4); /* Donkerder met transparantie */
+	padding: 10px;
+	border-radius: 6px;
+	cursor: pointer;
+	border: 2px solid transparent;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: space-between; /* Plaatje boven, tekst onder */
+	gap: 8px;
+	color: white;
+	font-size: 12px;
+	font-family: Arial, sans-serif; /* Consistent lettertype */
+	width: 90px;
+	height: 110px; /* Vaste hoogte teruggezet */
+}
+
+.build-item:hover {
+	background: #555;
+}
+
+.build-item.selected {
+	border-color: white;
+}
+
+#buildMenuHeader,
+#chatLogHeader,
+#inventoryHeader {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.close-btn {
+	font-size: 24px;
+	font-weight: bold;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0 5px;
+}
+
+.build-item img {
+	height: 64px; /* Vaste hoogte voor consistentie */
+}
+
+#chatLog {
+	position: absolute;
+	bottom: 60px;
+	right: 20px;
+	width: 320px;
+	height: 400px;
+
+	background: rgba(17, 17, 17, 0.85); /* Transparantie toegevoegd */
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.85); /* Transparantie toegevoegd */
+	border-radius: 10px;
+
+	font-family: Arial;
+	font-size: 14px;
+
+	display: none;
+	overflow: hidden;
+	z-index: 20;
+}
+
+#inventory {
+	position: absolute;
+	left: 150px;
+	top: 120px;
+	width: 400px; /* Breder gemaakt */
+	height: 450px; /* Langer gemaakt */
+	background: rgba(17, 17, 17, 0.85); /* Transparantie toegevoegd */
+	color: white;
+	border: 1px solid rgba(255, 255, 255, 0.85); /* Transparantie toegevoegd */
+	border-radius: 10px;
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	display: none; /* Start verborgen */
+	overflow: hidden;
+	z-index: 20;
+	flex-direction: column; /* Zorgt dat header en content onder elkaar staan */
+}
+
+#chatLogHeader {
+	height: 36px;
+	line-height: 36px;
+	padding: 0 12px;
+
+	background: #1a1a1a;
+	border-bottom: 0px solid white;
+	border-radius: 10px 10px 0 0;
+
+	cursor: move;
+	user-select: none;
+}
+
+#inventoryHeader {
+	height: 36px;
+	line-height: 36px;
+	padding: 0 12px;
+	background: #1a1a1a;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 10px 10px 0 0;
+	cursor: move;
+	user-select: none;
+}
+
+#inventoryTools {
+	padding: 5px 10px; /* Minder verticale padding */
+	display: flex;
+	gap: 10px;
+	justify-content: space-between; /* Wallet links, dagboek rechts */
+	align-items: center; /* Verticaal centreren */
+	background: rgba(0, 0, 0, 0.1);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#wallet {
+	font-family: Arial, sans-serif;
+	font-size: 14px;
+	color: white; /* Goud-achtige kleur */
+	padding: 5px 10px;
+	border-radius: 5px;
+}
+
+#chatLogContent {
+	height: calc(100% - 36px);
+	padding: 10px;
+	overflow-y: auto;
+	box-sizing: border-box;
+}
+
+#inventoryContent {
+	height: calc(100% - 36px - 51px); /* Hoogte minus header en dunnere tools paneel */
+	padding: 10px;
+	overflow-y: auto;
+	box-sizing: border-box;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+	gap: 10px;
+	justify-items: center;
+}
+
+/* ───── Custom scrollbar (WebKit) voor Chat & Bouwmenu ───── */
+#chatLogContent::-webkit-scrollbar,
+#buildMenuContent::-webkit-scrollbar,
+#inventoryContent::-webkit-scrollbar {
+	width: 6px;
+}
+
+#chatLogContent::-webkit-scrollbar-track,
+#buildMenuContent::-webkit-scrollbar-track,
+#inventoryContent::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+#chatLogContent::-webkit-scrollbar-thumb,
+#buildMenuContent::-webkit-scrollbar-thumb,
+#inventoryContent::-webkit-scrollbar-thumb {
+	background: white;
+	border-radius: 6px;
+}
+
+/* ───── Custom scrollbar (Firefox) voor Chat & Bouwmenu ───── */
+#chatLogContent,
+#buildMenuContent,
+#inventoryContent {
+	scrollbar-width: thin;
+	scrollbar-color: white transparent;
+}
