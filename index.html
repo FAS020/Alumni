@@ -14,6 +14,7 @@ html, body {
 canvas {
   display: block;
   cursor: pointer;
+  image-rendering: pixelated; /* Zorgt voor scherpe weergave op alle schermen */
 }
 
 /* ───────────────────────────── */
@@ -327,7 +328,7 @@ button {
   border-color: white;
 }
 
-#buildMenuHeader, #chatLogHeader, #inventoryHeader {
+#buildMenuHeader, #chatLogHeader, #inventoryHeader, #pongHeader, #shopHeader, #containerHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -335,7 +336,6 @@ button {
 
 .close-btn {
   font-size: 24px;
-  font-weight: bold;
   line-height: 1;
   cursor: pointer;
   padding: 0 5px;
@@ -343,6 +343,33 @@ button {
 
 .build-item img {
   height: 64px; /* Vaste hoogte voor consistentie */
+  image-rendering: pixelated;
+}
+
+/* NIEUW: Stijl voor inventory items (alleen plaatje, geen tekst) */
+.inventory-item {
+  background: transparent;
+  border-radius: 6px;
+  cursor: grab;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  padding: 5px;
+  box-sizing: border-box;
+  user-select: none;
+}
+.inventory-item:hover {
+  background: transparent;
+}
+.inventory-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  image-rendering: pixelated;
 }
 
 #chatLog {
@@ -396,7 +423,7 @@ button {
   user-select: none;
 }
 
-#inventoryHeader {
+#inventoryHeader, #pongHeader, #shopHeader, #containerHeader {
   height: 36px;
   line-height: 36px;
   padding: 0 12px;
@@ -425,6 +452,12 @@ button {
   border-radius: 5px;
 }
 
+#transactionFeed {
+  font-family: Arial, sans-serif;
+  font-size: 12px; /* 2px kleiner dan wallet (14px) */
+  opacity: 0;
+}
+
 #chatLogContent {
   height: calc(100% - 36px);
   padding: 10px;
@@ -435,12 +468,138 @@ button {
 #inventoryContent {
   height: calc(100% - 36px - 51px); /* Hoogte minus header en dunnere tools paneel */
   padding: 10px;
-  overflow-y: auto;
+  overflow: hidden; /* Scrollen uitgeschakeld zoals gevraagd */
   box-sizing: border-box;
+  display: block; /* Was grid, nu block voor vrije plaatsing */
+  position: relative; /* Zodat items absoluut gepositioneerd kunnen worden */
+}
+
+/* ───── Pong Minigame ───── */
+#pongGame {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 600px; /* Breder gemaakt zoals een tafel */
+  height: 336px; /* 300 canvas + 36 header */
+  background: rgba(17, 17, 17, 0.85); /* Subtiele transparantie */
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  display: none;
+  z-index: 30; /* Bovenop alles */
+  flex-direction: column;
+  overflow: hidden;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+}
+#pongScoreboard {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 14px;
+  font-weight: bold;
+}
+
+#pongCanvas {
+  background: rgba(0, 0, 0, 0.6); /* Half-transparant speelveld */
+  width: 100%;
+  height: 264px; /* Aangepast voor scorebord */
+  cursor: default; /* Cursor wordt via JS geregeld */
+}
+
+/* Achtergrond voor Pong om clicks af te vangen en cursor te verbergen */
+#pongBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 29; /* Net onder de pong game (30) */
+  display: none;
+}
+
+/* Notificatie paneel */
+#notification {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(17, 17, 17, 0.85);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  z-index: 100;
+  pointer-events: none; /* Klik er doorheen */
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+}
+
+/* ───── Winkel Venster ───── */
+#shopWindow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px; /* Breder gemaakt voor mooiere spacing */
+  height: 550px;
+  background: rgba(17, 17, 17, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  display: none;
+  z-index: 25;
+  flex-direction: column;
+  overflow: hidden;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+#shopContent {
+  padding: 10px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 5px;
+  overflow-y: auto;
   justify-items: center;
+  height: 360px;
+}
+
+#shopOutput {
+  flex-grow: 1;
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.2);
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 10px;
+  border-radius: 6px;
+}
+
+/* ───── Container Venster ───── */
+#containerWindow {
+  position: absolute;
+  left: 600px; /* Rechts van inventory */
+  top: 120px;
+  width: 260px;
+  height: 300px;
+  background: rgba(17, 17, 17, 0.85);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 10px;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  display: none;
+  overflow: hidden;
+  z-index: 20;
+  flex-direction: column;
 }
 
 /* ───── Custom scrollbar (WebKit) voor Chat & Bouwmenu ───── */
@@ -558,12 +717,48 @@ button {
     <span class="close-btn" id="closeInventoryBtn">×</span>
   </div>
   <div id="inventoryTools">
-    <div id="wallet">€0.00</div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <div id="wallet">€0.00</div>
+      <div id="transactionFeed"></div>
+    </div>
     <button id="diaryBtn" class="tool-btn" title="Dagboek">📓</button>
   </div>
   <div id="inventoryContent">
     <!-- Inventaris items komen hier -->
   </div>
+</div>
+
+<div id="pongBackdrop"></div>
+
+<div id="notification"></div>
+
+<div id="shopWindow">
+  <div id="shopHeader">
+    <span>Winkel</span>
+    <span class="close-btn" id="closeShopBtn">×</span>
+  </div>
+  <div id="shopContent"></div>
+  <div id="shopOutput"></div>
+</div>
+
+<div id="containerWindow">
+  <div id="containerHeader">
+    <span>Container</span>
+    <span class="close-btn" id="closeContainerBtn">×</span>
+  </div>
+  <div id="containerContent" style="position: relative; height: calc(100% - 36px); overflow: hidden;"></div>
+</div>
+
+<div id="pongGame">
+  <div id="pongHeader"> <!-- Uniek ID voor slepen -->
+    <span>Tafeltennis</span>
+    <span class="close-btn" id="closePongBtn">×</span>
+  </div>
+  <div id="pongScoreboard">
+    <div class="score-player">Speler: <span id="playerScore">0</span></div>
+    <div class="score-ai">Tegenstander: <span id="aiScore">0</span></div>
+  </div>
+  <canvas id="pongCanvas" width="600" height="264"></canvas>
 </div>
 
 <canvas id="canvas"></canvas>
@@ -573,8 +768,13 @@ button {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+// High DPI setup
+const dpr = window.devicePixelRatio || 1;
+canvas.width = window.innerWidth * dpr;
+canvas.height = window.innerHeight * dpr;
+canvas.style.width = window.innerWidth + 'px';
+canvas.style.height = window.innerHeight + 'px';
+ctx.imageSmoothingEnabled = false; // Zorgt voor scherpe pixel-art (geen wazige randjes bij zoomen)
 
 const MAX_CHARS = 80;
 const charCounter = document.getElementById("charCounter");
@@ -621,9 +821,17 @@ let camY = 0;
 let isCameraDragging = false; // Nieuwe variabele voor camera slepen
 let isObjectDragging = false; // Nieuwe variabele voor object slepen
 let isItemDragging = false;   // NIEUW: Variabele voor het slepen van items
+let isDraggingFromInventory = false; // NIEUW: Houdt bij of we vanuit de inventaris slepen
+let isDraggingFromShop = false; // NIEUW: Houdt bij of we vanuit de winkel slepen
+let isDraggingFromContainer = false; // NIEUW: Houdt bij of we vanuit een container slepen
+let isRearrangingInventory = false; // NIEUW: Voor het verplaatsen binnen de inventaris
+let isRearrangingContainer = false; // NIEUW: Voor het verplaatsen binnen de container
+let activeInventoryItem = null; // NIEUW: Het item dat we binnen de inventaris verplaatsen
+let activeContainerItem = null; // NIEUW: Het item dat we binnen de container verplaatsen
+let inventoryDragOffset = {x:0, y:0}; // NIEUW: Offset voor slepen in inventaris
+let containerDragOffset = {x:0, y:0}; // NIEUW: Offset voor slepen in container
 let dragStart = {x:0, y:0};
 let camStart = {x:0, y:0};
-const maxTiles = 4;
 
 // Smooth center
 let camTargetX = 0;
@@ -638,6 +846,8 @@ function bringToFront(element) {
     document.getElementById('buildMenu').style.zIndex = 20;
     document.getElementById('chatLog').style.zIndex = 20;
     document.getElementById('inventory').style.zIndex = 20;
+    document.getElementById('shopWindow').style.zIndex = 20;
+    document.getElementById('containerWindow').style.zIndex = 20;
     // Plaats het geklikte element op de voorgrond
     element.style.zIndex = highestZ;
 }
@@ -645,6 +855,8 @@ function bringToFront(element) {
 function closeSecondaryWindows() {
     document.getElementById('chatLog').style.display = 'none';
     document.getElementById('inventory').style.display = 'none';
+    document.getElementById('shopWindow').style.display = 'none';
+    document.getElementById('containerWindow').style.display = 'none';
 }
 
 function closeAllWindows() {
@@ -666,6 +878,7 @@ let windowStatesBeforeDrag = null; // Onthoudt welke vensters open waren
 let draggedObject = null; // Voor het verslepen van 'moveable' objecten buiten bouwmodus
 let draggedItem = null; // NIEUW: Item dat wordt versleept
 let draggedItemOriginalPos = null; // NIEUW: Originele positie van het versleepte item
+let dragImageElement = null; // NIEUW: DOM element voor visuele weergave tijdens slepen
 let draggedObjectOriginalPos = null;
 let camOriginalPos = null; // Voor het resetten van de camera na het slepen van een object
 
@@ -678,69 +891,204 @@ let wallColors = {}; // Slaat de muurkleuren op per segment, bv: { 'top_5': '#ff
 let wallObjects = []; // Slaat geplaatste muurobjecten op, bv: { wallId: 'top_5', name: 'Muurdecoratie', flipped: false }
 
 let hoverTarget = null; // Houdt bij wat er gehoverd wordt: { type: 'tile'/'wall', id: 'x,y'/'top'/'left' }
+let activeInteractionButton = null; // NIEUW: Voor klikbare interacties
 
 // Object image
 const objectImg = new Image();
 objectImg.src = "object_template.png"; // 64x64 symmetrisch
 const objectImg96 = new Image();
 objectImg96.src = "object_template_96.png"; // 64x96 symmetrisch
+const objectImg96B = new Image();
+objectImg96B.src = "object_template_96_B.png"; // 1 hoog, 2 breed
 const moveableObjectImg = new Image();
 moveableObjectImg.src = "object_moveable_template.png";
+const moveableObjectImg96B = new Image();
+moveableObjectImg96B.src = "object_moveable_template_96_B.png";
 const wallItemImg = new Image();
 wallItemImg.src = "wall_template.png";
+
+const pongImg = new Image();
+pongImg.src = "pong.png";
+const pongPromptImg = new Image();
+pongPromptImg.src = "prompts/pong.png";
+const shopPromptImg = new Image();
+shopPromptImg.src = "prompts/winkel.png";
+const winkelImg = new Image();
+winkelImg.src = "winkel_template_96.png";
+const containerImg = new Image();
+containerImg.src = "container_template.png";
+const containerPromptImg = new Image();
+containerPromptImg.src = "prompts/container.png";
+const containerImg96 = new Image();
+containerImg96.src = "container_template_96.png";
+const containerImg96B = new Image();
+containerImg96B.src = "container_template_96_B.png";
 
 // Nieuwe afbeelding voor oppakbare items
 const itemImg = new Image();
 itemImg.src = "item_block.png"; // Zorg ervoor dat dit bestand bestaat
 
+const itemRoundImg = new Image();
+itemRoundImg.src = "item_round.png"; // De nieuwe ronde afbeelding
+
+const currencyItemImg = new Image();
+currencyItemImg.src = "currency_item.png";
+
+const currencyItemBigImg = new Image();
+currencyItemBigImg.src = "currency_item_big.png";
+
+const itemStickImg = new Image();
+itemStickImg.src = "item_stick.png";
+
+const batjeRoodImg = new Image();
+batjeRoodImg.src = "items/batje_rood.png";
+
+const batjeZwartImg = new Image();
+batjeZwartImg.src = "items/batje_zwart.png";
+
 // Array voor oppakbare items
 const items = [
-    { x: 8.5, y: 8.5, vx: 0, vy: 0, mass: 1.2, image: itemImg },
-    { x: 12.5, y: 15.5, vx: 0, vy: 0, mass: 1.0, image: itemImg }
+    { x: 8.5, y: 8.5, vx: 0, vy: 0, mass: 1.2, image: itemImg, z: 0, vz: 0, rotation: 0, vr: 0 },
+    { x: 12.5, y: 15.5, vx: 0, vy: 0, mass: 1.0, image: itemImg, z: 0, vz: 0, rotation: 0, vr: 0 },
+    // Nieuwe ronde items die kunnen roteren
+    { x: 10.5, y: 10.5, vx: 0, vy: 0, mass: 0.8, image: itemRoundImg, canRotate: true, z: 0, vz: 0, rotation: 0, vr: 0 },
+    { x: 14.5, y: 12.5, vx: 0, vy: 0, mass: 0.8, image: itemRoundImg, canRotate: true, z: 0, vz: 0, rotation: 0, vr: 0 }
+    // Currency items
+    ,{ x: 9.5, y: 9.5, vx: 0, vy: 0, mass: 0.5, image: currencyItemImg, z: 0, vz: 0, rotation: 0, vr: 0, type: 'currency' },
+    { x: 11.5, y: 9.5, vx: 0, vy: 0, mass: 0.5, image: currencyItemBigImg, z: 0, vz: 0, rotation: 0, vr: 0, type: 'currency_big' },
+    // Stick item (omvallen)
+    { x: 12.5, y: 9.5, vx: 0, vy: 0, mass: 0.4, image: itemStickImg, z: 0, vz: 0, rotation: 0, vr: 0, canTopple: true },
+    // Batje Rood (omvallen)
+    { x: 13.5, y: 9.5, vx: 0, vy: 0, mass: 0.4, image: batjeRoodImg, z: 0, vz: 0, rotation: 0, vr: 0, canTopple: true, name: "Batje Rood" },
+    // Batje Zwart (omvallen)
+    { x: 14.5, y: 9.5, vx: 0, vy: 0, mass: 0.4, image: batjeZwartImg, z: 0, vz: 0, rotation: 0, vr: 0, canTopple: true, name: "Batje Zwart" }
 ];
 
 // Array voor items in de inventaris
 const inventoryItems = [];
+let walletBalance = 0.00;
+const shopOutputItems = []; // Items in de uitgiftebak van de winkel
+let highestInventoryZ = 10; // Voor z-index management in inventory
+let highestContainerZ = 10; // Voor z-index management in container
+let transactionFadeTimeout;
+
+function addToWallet(amount) {
+    walletBalance += amount;
+    document.getElementById('wallet').textContent = `€${walletBalance.toFixed(2)}`;
+
+    const feed = document.getElementById('transactionFeed');
+    const sign = amount >= 0 ? '+' : '';
+    feed.textContent = `${sign}€${amount.toFixed(2)}`;
+    feed.style.color = amount >= 0 ? '#4cd137' : '#ff4757'; // Groen of Rood
+    
+    // Reset animatie
+    feed.style.transition = 'none';
+    feed.style.opacity = '1';
+    
+    if (transactionFadeTimeout) clearTimeout(transactionFadeTimeout);
+    
+    // Start fade out
+    transactionFadeTimeout = setTimeout(() => {
+        feed.style.transition = 'opacity 2s ease-out';
+        feed.style.opacity = '0';
+    }, 1000);
+}
+
+function showNotification(message) {
+    const notif = document.getElementById('notification');
+    notif.textContent = message;
+    notif.style.display = 'block';
+    // Force reflow om transitie te triggeren
+    void notif.offsetWidth;
+    notif.style.opacity = '1';
+    
+    setTimeout(() => {
+        notif.style.opacity = '0';
+        setTimeout(() => {
+            notif.style.display = 'none';
+        }, 500); // Wacht op transitie
+    }, 3000);
+}
 
 // Objecten array
 const objects = [
-    { x: 5, y: 5, height: 1, flipped: false, name: "Blok" },   // Normaal object
+    { x: 5, y: 5, height: 1, width: 2, depth: 1, flipped: false, name: "Tafel" },   // NIEUW: Tafel (2 breed)
+    { x: 5, y: 8, height: 1, width: 2, depth: 1, flipped: true, name: "Tafel" },    // NIEUW: Tafel (geroteerd)
+    { x: 10, y: 5, height: 1, width: 2, depth: 1, flipped: false, name: "Pong" },   // NIEUW: Pong tafel
     { x: 10, y: 10, height: 2, flipped: false, name: "Hoge Blok" }, // Hoog object
     // Extra willekeurige objecten voor testdoeleinden
     { x: 15, y: 8, height: 1, flipped: false, name: "Blok" },
     { x: 3, y: 18, height: 2, flipped: true, name: "Hoge Blok" }, // Test een geflipt object
     { x: 20, y: 20, height: 1, flipped: false, name: "Blok" },
     { x: 18, y: 3, height: 2, flipped: false, name: "Hoge Blok" },
-    { x: 8, y: 12, height: 1, flipped: false, moveable: true, name: "Verplaatsbaar Blok" } // Nieuw verplaatsbaar object
+    { x: 8, y: 12, height: 1, flipped: false, moveable: true, name: "Verplaatsbaar Blok" }, // Nieuw verplaatsbaar object
+    // Winkels om te testen
+    { x: 16, y: 5, height: 2, flipped: false, name: "Winkel" },
+    { x: 19, y: 5, height: 2, flipped: true, name: "Winkel" },
+    // Container om te testen
+    { x: 12, y: 5, height: 1, flipped: false, name: "Container" },
+    { x: 12, y: 8, height: 2, flipped: false, name: "Grote Container" },
+    { x: 14, y: 8, height: 1, width: 2, depth: 1, flipped: false, name: "Brede Container" }
 ];
-
-// Helper: geef de tiles van de "achterliggende driehoek" van een object
-function getTriangleBehind(obj) {
-    const x = Math.floor(obj.x);
-    const y = Math.floor(obj.y);
-
-    return [
-        {x: x,     y: y + 1},   // direct achter
-        {x: x - 1, y: y + 1},   // links achter
-        {x: x + 1, y: y + 1}    // rechts achter
-    ];
-}
 
 function renderInventoryItems() {
     const inventoryContent = document.getElementById('inventoryContent');
     inventoryContent.innerHTML = ''; // Maak de lijst leeg
 
-    inventoryItems.forEach(item => {
+    inventoryItems.forEach((item, index) => {
         const div = document.createElement("div"); // NIEUW: Gebruik item.name voor weergave
-        div.className = "build-item"; // Gebruik dezelfde stijl als bouw-items
-        div.innerHTML = `<img src="${item.image.src}" alt="Item"><span>Oppakbaar</span>`;
-        // Hier kun je eventueel een onclick toevoegen om het item terug te plaatsen
+        div.className = "inventory-item"; // NIEUW: Gebruik specifieke stijl zonder tekst
+        const imgSrc = item.image ? item.image.src : '';
+        
+        // Zet de positie (of default naar 0,0 of een grid-achtige startpositie als het nieuw is)
+        // Als invX/invY nog niet bestaat, geven we het een plekje op basis van index (simpele grid fallback)
+        if (item.invX === undefined) {
+            item.invX = (index % 3) * 110 + 20;
+            item.invY = Math.floor(index / 3) * 110 + 20;
+        }
+        
+        div.style.position = 'absolute';
+        div.style.left = item.invX + 'px';
+        div.style.top = item.invY + 'px';
+        
+        div.innerHTML = `<img src="${imgSrc}" alt="Item" title="Sleep naar de kamer">`;
+        
+        // Event listener om items vanuit de inventaris te slepen
+        div.addEventListener("mousedown", (e) => {
+            // NIEUW: Breng item naar voorgrond
+            div.style.zIndex = ++highestInventoryZ;
+            
+            // Update array volgorde zodat dit ook zo blijft bij her-renderen
+            const idx = inventoryItems.indexOf(item);
+            if (idx > -1) {
+                inventoryItems.push(inventoryItems.splice(idx, 1)[0]);
+            }
+
+            e.preventDefault();
+            if (e.button === 0) { // Alleen linkermuisknop
+                // Start met verplaatsen BINNEN de inventaris
+                isRearrangingInventory = true;
+                activeInventoryItem = item;
+                
+                // Bereken offset zodat het item niet verspringt onder de muis
+                const rect = div.getBoundingClientRect();
+                inventoryDragOffset = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+                
+                e.stopPropagation(); // Voorkom dat andere kliks (zoals op het menu zelf) afgaan
+            }
+        });
+
         inventoryContent.appendChild(div);
     });
 }
 
+const inventory = document.getElementById("inventory");
+const inventoryBtn = document.getElementById("inventoryBtn");
+
 inventoryBtn.addEventListener("click", () => {
-    const inventory = document.getElementById('inventory');
     inventory.style.display = inventory.style.display === 'flex' ? 'none' : 'flex';
     renderInventoryItems(); // Update de inventaris wanneer deze wordt geopend
 });
@@ -748,7 +1096,12 @@ inventoryBtn.addEventListener("click", () => {
 // Collision check
 function isBlocked(x, y) {
     // Player kan niet op object tile staan
-    return objects.some(o => o.x === x && o.y === y);
+    return objects.some(o => {
+        const w = o.flipped ? (o.depth || 1) : (o.width || 1);
+        const d = o.flipped ? (o.width || 1) : (o.depth || 1);
+        // Check of x,y binnen de bounding box van het object valt
+        return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+    });
 }
 
 // NIEUW: Check of een tegel bezet is door een item (exclusief het item dat we nu slepen)
@@ -767,7 +1120,14 @@ const buildMenuContent = document.getElementById("buildMenuContent");
 const buildableObjects = [
     { name: "Blok", height: 1, image: objectImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
     { name: "Hoge Blok", height: 2, image: objectImg96.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
+    { name: "Tafel", height: 1, width: 2, depth: 1, image: objectImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
     { name: "Verplaatsbaar Blok", height: 1, image: moveableObjectImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor', moveable: true },
+    { name: "Verplaatsbare Tafel", height: 1, width: 2, depth: 1, image: moveableObjectImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor', moveable: true },
+    { name: "Pong", height: 1, width: 2, depth: 1, image: pongImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
+    { name: "Winkel", height: 2, image: winkelImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
+    { name: "Container", height: 1, image: containerImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
+    { name: "Grote Container", height: 2, image: containerImg96.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
+    { name: "Brede Container", height: 1, width: 2, depth: 1, image: containerImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
     ...Array(6).fill(null).map((_, i) => ({ name: `Test ${i+1}`, height: 1, image: "", category: 'objecten', subCategory: 'blok', placement: 'floor' })),
     { name: "Muurdecoratie", image: wallItemImg.src, category: 'objecten', subCategory: 'muur', placement: 'wall' },
     ...Array(8).fill(null).map((_, i) => ({ name: `Test Muur ${i+1}`, image: "", category: 'objecten', subCategory: 'muur', placement: 'wall' }))
@@ -861,9 +1221,6 @@ function setBuildTool(tool) {
 }
 
 moveToolBtn.addEventListener('click', () => {
-    const moveToolBtn = document.getElementById("moveToolBtn");
-    const deleteToolBtn = document.getElementById("deleteToolBtn");
-
     if (buildTool === 'move') {
         setBuildTool('place'); // Terug naar neutraal
         moveToolBtn.classList.remove('selected');
@@ -876,9 +1233,6 @@ moveToolBtn.addEventListener('click', () => {
 });
 
 deleteToolBtn.addEventListener('click', () => {
-    const moveToolBtn = document.getElementById("moveToolBtn");
-    const deleteToolBtn = document.getElementById("deleteToolBtn");
-
     setBuildTool(buildTool === 'delete' ? 'place' : 'delete');
     deleteToolBtn.classList.toggle('selected');
     moveToolBtn.classList.remove('selected');
@@ -896,7 +1250,6 @@ document.getElementById('closeChatLogBtn').addEventListener('click', () => {
 });
 
 document.getElementById('closeInventoryBtn').addEventListener('click', () => {
-    const inventory = document.getElementById('inventory');
     inventory.style.display = 'none';
 });
 
@@ -908,9 +1261,6 @@ buildCategoryMenu.addEventListener('click', (e) => {
         });
         // Deselecteer de losse tools
         setBuildTool('place');
-        const moveToolBtn = document.getElementById("moveToolBtn");
-        const deleteToolBtn = document.getElementById("deleteToolBtn");
-
         moveToolBtn.classList.remove('selected');
         deleteToolBtn.classList.remove('selected');
 
@@ -1014,9 +1364,6 @@ buildBtn.addEventListener("click", () => {
         document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
         isBuildObjectFlipped = false;
         setBuildTool('place');
-        const moveToolBtn = document.getElementById("moveToolBtn");
-        const deleteToolBtn = document.getElementById("deleteToolBtn");
-
         moveToolBtn.classList.remove('selected');
         deleteToolBtn.classList.remove('selected');
         // Reset naar objecten categorie voor de volgende keer
@@ -1024,11 +1371,178 @@ buildBtn.addEventListener("click", () => {
     }
 });
 
+// ─────────────────────────────────────────────
+// 🏓 PONG MINIGAME LOGICA
+// ─────────────────────────────────────────────
+const pongCanvas = document.getElementById('pongCanvas');
+const pongCtx = pongCanvas.getContext('2d');
+const playerScoreEl = document.getElementById('playerScore');
+const aiScoreEl = document.getElementById('aiScore');
+let pongGameStarted = false; // NIEUW: Houdt bij of we voorbij het startscherm zijn
+let pongRunning = false;
+let isScoring = false; // NIEUW: Pauze na score
+let pongAnimationId;
 
+const pongBall = { x: 300, y: 132, vx: 3, vy: 3, size: 6 }; // Startpositie gecentreerd op 600x264
+const paddleHeight = 60;
+const paddleWidth = 10;
+const playerPaddle = { x: 10, y: 120, score: 0 };
+const aiPaddle = { x: 580, y: 120, score: 0 }; // Aangepast naar rechts (600 - 20)
 
+function startPongGame() {
+    const pongGame = document.getElementById('pongGame');
+    pongGame.style.display = 'flex';
+    resetPongBall();
+    playerPaddle.score = 0;
+    aiPaddle.score = 0;
+    playerScoreEl.textContent = '0';
+    aiScoreEl.textContent = '0';
+    pongGameStarted = false; // Wacht op spatie
+    pongRunning = false;
+    isScoring = false;
+    document.getElementById('pongBackdrop').style.display = 'block';
+    updatePongCursorState(true); // Verberg cursor wel alvast
+    pongLoop();
+}
 
+function stopPongGame() {
+    const pongGame = document.getElementById('pongGame');
+    pongGame.style.display = 'none';
+    document.getElementById('pongBackdrop').style.display = 'none';
+    pongRunning = false;
+    updatePongCursorState(false);
+    cancelAnimationFrame(pongAnimationId);
+}
 
+document.getElementById('closePongBtn').addEventListener('click', stopPongGame);
 
+window.addEventListener('mousemove', (e) => {
+    // Bestuur batje alleen als spel draait EN we niet het venster aan het slepen zijn
+    if (pongRunning && !isDraggingPong) {
+        const rect = pongCanvas.getBoundingClientRect();
+        const mouseY = e.clientY - rect.top;
+        playerPaddle.y = mouseY - paddleHeight / 2;
+    
+        // Clamp paddle binnen canvas
+        if(playerPaddle.y < 0) playerPaddle.y = 0;
+        if(playerPaddle.y > pongCanvas.height - paddleHeight) playerPaddle.y = pongCanvas.height - paddleHeight;
+    }
+});
+
+function resetPongBall() {
+    pongBall.x = pongCanvas.width / 2;
+    pongBall.y = pongCanvas.height / 2;
+    pongBall.vx = (Math.random() > 0.5 ? 1 : -1) * (4 + Math.random() * 2); // Snelheid iets verlaagd
+    pongBall.vy = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); // Snelheid iets verlaagd
+}
+
+function scorePause() {
+    isScoring = true;
+    resetPongBall();
+    setTimeout(() => {
+        isScoring = false;
+    }, 1000);
+}
+
+function updatePong() {
+    pongBall.x += pongBall.vx;
+    pongBall.y += pongBall.vy;
+
+    // Botsing boven/onder
+    if (pongBall.y < 0 || pongBall.y > pongCanvas.height) pongBall.vy = -pongBall.vy;
+
+    // AI Beweging (simpel volgen met vertraging)
+    const aiCenter = aiPaddle.y + paddleHeight / 2;
+    if (aiCenter < pongBall.y - 10) aiPaddle.y += 2.5; // Snelheid verlaagd van 3.5 naar 2.5
+    else if (aiCenter > pongBall.y + 10) aiPaddle.y -= 2.5;
+    
+    // Clamp AI
+    if(aiPaddle.y < 0) aiPaddle.y = 0;
+    if(aiPaddle.y > pongCanvas.height - paddleHeight) aiPaddle.y = pongCanvas.height - paddleHeight;
+
+    // Botsing Speler Paddle
+    if (pongBall.x < playerPaddle.x + paddleWidth && pongBall.y > playerPaddle.y && pongBall.y < playerPaddle.y + paddleHeight) {
+            pongBall.vx = -pongBall.vx * 1.05; // Versnellen
+            pongBall.x = playerPaddle.x + paddleWidth;
+    }
+    // Botsing AI Paddle
+    if (pongBall.x > aiPaddle.x - pongBall.size && pongBall.y > aiPaddle.y && pongBall.y < aiPaddle.y + paddleHeight) {
+            pongBall.vx = -pongBall.vx * 1.05;
+            pongBall.x = aiPaddle.x - pongBall.size;
+    }
+
+    // Score
+    if (pongBall.x < 0) { 
+        aiPaddle.score++; 
+        aiScoreEl.textContent = aiPaddle.score;
+        scorePause(); 
+    }
+    else if (pongBall.x > pongCanvas.width) { 
+        playerPaddle.score++; 
+        playerScoreEl.textContent = playerPaddle.score;
+        scorePause(); 
+    }
+}
+
+function drawPong() {
+    pongCtx.clearRect(0, 0, pongCanvas.width, pongCanvas.height); // Leegmaken voor transparantie
+    
+    pongCtx.fillStyle = 'white';
+    pongCtx.fillRect(playerPaddle.x, playerPaddle.y, paddleWidth, paddleHeight);
+    pongCtx.fillRect(aiPaddle.x, aiPaddle.y, paddleWidth, paddleHeight);
+    
+    pongCtx.beginPath();
+    pongCtx.arc(pongBall.x, pongBall.y, pongBall.size, 0, Math.PI * 2);
+    pongCtx.fill();
+}
+
+function updatePongCursorState(isRunning) {
+    const val = isRunning ? 'none' : 'default';
+    document.body.style.cursor = val;
+    document.getElementById('pongGame').style.cursor = val;
+    // Header cursor: 'none' als we spelen, 'move' als we gepauzeerd zijn
+    document.getElementById('pongHeader').style.cursor = isRunning ? 'none' : 'move';
+    document.getElementById('pongCanvas').style.cursor = val;
+}
+
+function pongLoop() {
+    if (document.getElementById('pongGame').style.display === 'none') return;
+
+    if (!pongGameStarted) {
+        // Startscherm tekenen
+        drawPong();
+        pongCtx.fillStyle = "rgba(0,0,0,0.5)";
+        pongCtx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+        pongCtx.fillStyle = "white";
+        pongCtx.font = "30px Arial";
+        pongCtx.textAlign = "center";
+        pongCtx.fillText("Druk op SPATIE om te starten", pongCanvas.width/2, pongCanvas.height/2);
+    } else if (pongRunning) {
+        if (!isScoring) updatePong(); // Alleen updaten als we niet in score-pauze zitten
+        drawPong();
+    } else {
+        // Als gepauzeerd: teken de game (statisch) en de overlay
+        drawPong();
+        pongCtx.fillStyle = "rgba(0,0,0,0.5)";
+        pongCtx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+        pongCtx.fillStyle = "white";
+        pongCtx.font = "30px Arial";
+        pongCtx.textAlign = "center";
+        pongCtx.fillText("Gepauzeerd", pongCanvas.width/2, pongCanvas.height/2);
+        pongCtx.font = "16px Arial";
+        pongCtx.fillText("Druk op ESC om verder te gaan", pongCanvas.width/2, pongCanvas.height/2 + 30);
+    }
+    
+    pongAnimationId = requestAnimationFrame(pongLoop);
+}
+
+function togglePongPause() {
+    const pongGame = document.getElementById('pongGame');
+    if (pongGame.style.display === 'flex' && pongGameStarted) {
+        pongRunning = !pongRunning;
+        updatePongCursorState(pongRunning);
+    }
+}
 
 // Chat
 const chatInput = document.getElementById("chatInput");
@@ -1175,8 +1689,8 @@ function toScreen(ix, iy) {
 }
 
 function toTile(mx, my){
-    const cx = (mx - canvas.width/2 - camX)/scale;
-    const cy = (my - canvas.height/4 - camY)/scale;
+    const cx = (mx - window.innerWidth/2 - camX)/scale;
+    const cy = (my - window.innerHeight/4 - camY)/scale;
 
     const tyOffset = 1.5; // capsule is 1.5 tegel hoog
     const tx = (cx/tileW + cy/tileH);
@@ -1186,8 +1700,8 @@ function toTile(mx, my){
 
 function toWorld(mx, my) {
     // Converteert schermcoördinaten (muis) naar wereldcoördinaten (isometrisch)
-    const worldMouseX = (mx - canvas.width / 2 - camX) / scale;
-    const worldMouseY = (my - canvas.height / 4 - camY) / scale;
+    const worldMouseX = (mx - window.innerWidth / 2 - camX) / scale;
+    const worldMouseY = (my - window.innerHeight / 4 - camY) / scale;
 
     // Inverse transformatie van toScreen
     const isoX = worldMouseX / (tileW / 2);
@@ -1268,12 +1782,15 @@ function drawTiles() {
             ctx.fill();
 
             // Tile nummer tekenen
+            ctx.save();
+            ctx.imageSmoothingEnabled = true; // Maak tekst tijdelijk glad
             ctx.fillStyle = "white";
             ctx.font = "10px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             const tileNum = y * mapW + x; // nummer van 0 t/m mapW*mapH-1
             ctx.fillText(tileNum, sx, sy + tileH / 2);
+            ctx.restore(); // Herstelt imageSmoothingEnabled naar de default (false)
         }
     }
 
@@ -1322,22 +1839,33 @@ function drawTiles() {
 
     // Bouwmodus hover (plaatsen & verplaatsen)
     if ((selectedBuildObject?.placement === 'floor' || movingObject || draggedObject) && hoverCell) {
-      const playerOnTile = Math.floor(ball.x) === hoverCell.x && Math.floor(ball.y) === hoverCell.y;
-      const isOccupied = isBlocked(hoverCell.x, hoverCell.y);
-      const isItemTileOccupied = isItemOccupied(hoverCell.x, hoverCell.y); // NIEUW: Check voor items
-      const isValidPlacement = !isOccupied && !playerOnTile && !isItemTileOccupied;
+        const obj = selectedBuildObject || movingObject || draggedObject;
+        const isFlipped = (obj === selectedBuildObject) ? isBuildObjectFlipped : (obj.flipped || false);
+        const w = isFlipped ? (obj.depth || 1) : (obj.width || 1);
+        const d = isFlipped ? (obj.width || 1) : (obj.depth || 1);
 
-      const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
-
-      // Teken de gekleurde tegel overlay (groen/rood)
-      ctx.beginPath();
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
-      ctx.lineTo(sx, sy + tileH);
-      ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
-      ctx.closePath();
-      ctx.fillStyle = isValidPlacement ? "rgba(0, 255, 0, 0.5)" : "rgba(255, 0, 0, 0.5)";
-      ctx.fill();
+        // Check geldigheid voor ALLE tegels die het object zou bedekken
+        let isValidPlacement = true;
+        for(let dx = 0; dx < w; dx++) {
+            for(let dy = 0; dy < d; dy++) {
+                const tx = hoverCell.x + dx;
+                const ty = hoverCell.y + dy;
+                if (tx >= mapW || ty >= mapH || isBlocked(tx, ty) || isItemOccupied(tx, ty) || (Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)) {
+                    isValidPlacement = false;
+                }
+                
+                // Teken overlay voor elke tegel
+                const { sx, sy } = toScreen(tx, ty);
+                ctx.beginPath();
+                ctx.moveTo(sx, sy);
+                ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+                ctx.lineTo(sx, sy + tileH);
+                ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+                ctx.closePath();
+                ctx.fillStyle = isValidPlacement ? "rgba(0, 255, 0, 0.5)" : "rgba(255, 0, 0, 0.5)";
+                ctx.fill();
+            }
+        }
 
       // De preview van het object zelf wordt nu in de renderList getekend voor correcte diepte.
     } else if (selectedBuildObject?.placement === 'wall' && hoverTarget?.type === 'wall') {
@@ -1360,8 +1888,14 @@ function drawTiles() {
 
     // Verwijder-modus hover
     if (buildTool === 'delete' && hoverCell) {
-        const objectOnTile = objects.find(o => o.x === hoverCell.x && o.y === hoverCell.y);
-        const itemOnTile = items.find(item => Math.floor(item.x) === hoverCell.x && Math.floor(item.y) === hoverCell.y);
+        // Zoek object dat deze tegel bezet (rekening houdend met width/depth)
+        const objectOnTile = objects.find(o => {
+            const w = o.flipped ? (o.depth || 1) : (o.width || 1);
+            const d = o.flipped ? (o.width || 1) : (o.depth || 1);
+            return hoverCell.x >= o.x && hoverCell.x < o.x + w && hoverCell.y >= o.y && hoverCell.y < o.y + d;
+        });
+        
+        const itemOnTile = !objectOnTile ? items.find(item => Math.floor(item.x) === hoverCell.x && Math.floor(item.y) === hoverCell.y) : null;
         if (objectOnTile || itemOnTile) {
             const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
 
@@ -1584,11 +2118,126 @@ chatInput.addEventListener("input", () => {
     charCounter.style.color = chatInput.value.length >= MAX_CHARS ? "#ff4d4d" : "#aaa";
 });
 
+// Zorg dat het canvas meeschaalt met het venster
+window.addEventListener('resize', () => {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr;
+    canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.imageSmoothingEnabled = false; // Opnieuw instellen na resize
+});
 
 
 
 window.addEventListener("keydown", (e) => {
     const active = document.activeElement;
+
+    // Pong pauze toggle met ESC
+    if (e.key === "Escape") {
+        togglePongPause();
+        
+        // Cancel bouwacties
+        if (isBuildMode) {
+            if (selectedBuildObject) {
+                selectedBuildObject = null;
+                const selectedItem = document.querySelector('.build-item.selected');
+                if (selectedItem) {
+                    selectedItem.classList.remove('selected');
+                    isBuildObjectFlipped = false;
+                }
+            }
+            if (movingObject) {
+                objects.push(movingObject); // Zet het object terug
+                movingObject = null;
+            }
+        }
+
+        // Cancel item dragging
+        if (isItemDragging && draggedItem) {
+            if (dragImageElement) {
+                dragImageElement.remove();
+                dragImageElement = null;
+            }
+            
+            if (isDraggingFromInventory) {
+                inventoryItems.push(draggedItem);
+                renderInventoryItems();
+            } else if (isDraggingFromShop) {
+                shopOutputItems.push(draggedItem);
+                renderShopOutput();
+            } else {
+                if (draggedItemOriginalPos) {
+                    draggedItem.x = draggedItemOriginalPos.x;
+                    draggedItem.y = draggedItemOriginalPos.y;
+                    items.push(draggedItem); // Zet item terug
+                }
+            }
+            isItemDragging = false;
+            isDraggingFromInventory = false;
+            isDraggingFromShop = false;
+            draggedItem = null;
+            draggedItemOriginalPos = null;
+            
+            // Heropen de vensters die open stonden
+            if (windowStatesBeforeDrag) {
+                if (windowStatesBeforeDrag.chat) document.getElementById('chatLog').style.display = windowStatesBeforeDrag.chat;
+                if (windowStatesBeforeDrag.inventory) document.getElementById('inventory').style.display = windowStatesBeforeDrag.inventory;
+                if (windowStatesBeforeDrag.build === 'flex') {
+                    buildBtn.click();
+                }
+                if (windowStatesBeforeDrag.shop === 'flex') {
+                    document.getElementById('shopWindow').style.display = 'flex';
+                }
+            if (windowStatesBeforeDrag.container === 'flex') {
+                document.getElementById('containerWindow').style.display = 'flex';
+            }
+                windowStatesBeforeDrag = null;
+            }
+        }
+
+        // Cancel object dragging (moveable objects)
+        if (isObjectDragging && draggedObject) {
+             draggedObject.x = draggedObjectOriginalPos.x;
+             draggedObject.y = draggedObjectOriginalPos.y;
+             objects.push(draggedObject);
+             draggedObject = null;
+             draggedObjectOriginalPos = null;
+             isObjectDragging = false;
+             
+             if (camOriginalPos) {
+                camTargetX = camOriginalPos.x;
+                camTargetY = camOriginalPos.y;
+                camSmooth = true;
+                camOriginalPos = null;
+            }
+
+            if (windowStatesBeforeDrag) {
+                if (windowStatesBeforeDrag.chat) document.getElementById('chatLog').style.display = windowStatesBeforeDrag.chat;
+                if (windowStatesBeforeDrag.inventory) document.getElementById('inventory').style.display = windowStatesBeforeDrag.inventory;
+                if (windowStatesBeforeDrag.build === 'flex') {
+                     if (!isBuildMode) buildBtn.click();
+                }
+                if (windowStatesBeforeDrag.shop === 'flex') {
+                    document.getElementById('shopWindow').style.display = 'flex';
+                }
+                if (windowStatesBeforeDrag.container === 'flex') {
+                    document.getElementById('containerWindow').style.display = 'flex';
+                }
+                windowStatesBeforeDrag = null;
+            }
+        }
+    }
+
+    // Pong start met Spatie
+    if (e.code === "Space") {
+        if (document.getElementById('pongGame').style.display === 'flex' && !pongGameStarted) {
+            pongGameStarted = true;
+            pongRunning = true;
+            e.preventDefault(); // Voorkom typen in chat
+            return;
+        }
+    }
 
     // Als we in bouwmodus zijn, handel alleen de rotatie af.
     if (isBuildMode && activeBuildCategory === 'objecten' && (selectedBuildObject || movingObject)) {
@@ -1600,6 +2249,15 @@ window.addEventListener("keydown", (e) => {
             }
         }
         return; // Stop verdere keyboard-logica in bouwmodus
+    }
+
+    // Als we een moveable object aan het slepen zijn (buiten bouwmodus)
+    if (isObjectDragging && draggedObject) {
+        if (e.key.toLowerCase() === 'r') {
+            draggedObject.flipped = !draggedObject.flipped;
+            e.preventDefault(); // Voorkom dat 'r' in de chat komt
+        }
+        return; // Stop verdere afhandeling (geen chat focus)
     }
 
     // ❌ Geen bouwmodus: focus de chat, maar sluit speciale toetsen uit
@@ -1636,8 +2294,8 @@ function drawChatBallon() {
     const offsetAbovePlayer = 96;
 
     const world = toScreen(ball.x, ball.y);
-    const screenX = world.sx * scale + canvas.width / 2 + camX;
-    const screenY = world.sy * scale + canvas.height / 4 + camY - hopOffset * scale;
+    const screenX = world.sx * scale + window.innerWidth / 2 + camX;
+    const screenY = world.sy * scale + window.innerHeight / 4 + camY - hopOffset * scale;
 
     // ─────────────────────────────────────────────
     // 1️⃣ actieve chatberichten
@@ -1686,7 +2344,8 @@ function drawChatBallon() {
     }
 
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.imageSmoothingEnabled = true; // Maak de tekstballon en tekst glad (UI element)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Schaal UI mee met DPI
     ctx.font = "14px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -1801,28 +2460,128 @@ function drawChatBallon() {
     ctx.restore();
 }
 
+function drawInteractionPrompts() {
+    activeInteractionButton = null; // Reset elke frame
+    const playerX = Math.floor(ball.x);
+    const playerY = Math.floor(ball.y);
+
+    objects.forEach(obj => {
+        if (obj.name === "Pong" || obj.name === "Winkel" || obj.name.includes("Container")) {
+            const isFlipped = obj.flipped;
+            const w = isFlipped ? (obj.depth || 1) : (obj.width || 1); // Pong=2x1, Winkel=1x1 (maar hoog)
+            const d = isFlipped ? (obj.width || 1) : (obj.depth || 1);
+
+            let spots = [];
+            
+            if (obj.name === "Winkel") {
+                // Winkel heeft maar 1 interactiekant (voorkant)
+                if (isFlipped) {
+                    spots.push({x: obj.x, y: obj.y + 1}); // Links-onder (y+1)
+                } else {
+                    spots.push({x: obj.x + 1, y: obj.y}); // Rechts-onder (x+1)
+                }
+            } else if (obj.name.includes("Container")) {
+                if (obj.name === "Brede Container") {
+                    // Speciale logica voor de brede container: interactie aan de 'voorkant' (onder/rechts)
+                    if (isFlipped) {
+                        // Verticale oriëntatie -> Interactie rechts (x+w)
+                        for (let i = 0; i < d; i++) {
+                            spots.push({x: obj.x + w, y: obj.y + i});
+                        }
+                    } else {
+                        // Horizontale oriëntatie -> Interactie onder (y+d)
+                        for (let i = 0; i < w; i++) {
+                            spots.push({x: obj.x + i, y: obj.y + d});
+                        }
+                    }
+                } else {
+                    // Standaard logica voor andere containers (zoals het was)
+                    if (isFlipped) {
+                        spots.push({x: obj.x, y: obj.y + 1}); // Onder
+                    } else {
+                        spots.push({x: obj.x + 1, y: obj.y}); // Rechts
+                    }
+                }
+            } else {
+                // Pong heeft 2 kanten
+                if (isFlipped) {
+                    // Verticaal: plekken boven en onder
+                    spots.push({x: obj.x, y: obj.y - 1});
+                    spots.push({x: obj.x, y: obj.y + d});
+                } else {
+                    // Horizontaal: plekken links en rechts
+                    spots.push({x: obj.x - 1, y: obj.y});
+                    spots.push({x: obj.x + w, y: obj.y});
+                }
+            }
+
+            const isPlayerOnSpot = spots.some(s => s.x === playerX && s.y === playerY);
+
+            if (isPlayerOnSpot) {
+                // Teken prompt
+                const { sx, sy } = toScreen(ball.x, ball.y);
+                const drawX = sx * scale + window.innerWidth / 2 + camX;
+                const drawY = (sy - 80) * scale + window.innerHeight / 4 + camY - hopOffset * scale; // Boven speler
+
+                ctx.save();
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Reset transform voor UI, schaal mee met DPR
+                
+                // Teken pong prompt
+                let promptImg = pongPromptImg;
+                if (obj.name === "Winkel") {
+                    promptImg = shopPromptImg;
+                } else if (obj.name.includes("Container")) {
+                    promptImg = containerPromptImg;
+                }
+                const imgW = promptImg.width || 32;
+                const imgH = promptImg.height || 32;
+                
+                const time = Date.now();
+                
+                if (obj.name.includes("Container")) {
+                    // Animatie: zacht sprongetje (bounce)
+                    const bounce = Math.abs(Math.sin(time / 300)) * 8; // Springt 8px omhoog
+                    ctx.translate(drawX, drawY - bounce);
+                } else {
+                    // Animatie: zachtjes wiebelen (rotatie)
+                    const angle = Math.sin(time / 200) * 0.2; // +/- 0.2 radialen
+                    ctx.translate(drawX, drawY); // Verplaats naar midden van prompt
+                    ctx.rotate(angle);
+                }
+                
+                // Schaduw voor betere zichtbaarheid
+                ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.drawImage(promptImg, -imgW / 2, -imgH / 2);
+                
+                // Sla op voor click detectie
+                activeInteractionButton = { x: drawX - imgW/2, y: drawY - imgH/2, w: imgW, h: imgH, obj: obj };
+
+                ctx.restore();
+            }
+        }
+    });
+}
 
 let mousePos = { x: 0, y: 0 };
 // Event listeners
 canvas.addEventListener("mousemove", e=>{
+    // Blokkeer hover-effecten in de hoofdkamer als Pong actief is
+    if (pongRunning) return;
+
     mousePos = { x: e.clientX, y: e.clientY };
 
     const {x, y} = toTile(e.clientX, e.clientY);
     hoverCell = (x>=0 && x<mapW && y>=0 && y<mapH) ? {x,y} : null;
 
-    // Update draggedItem position if dragging
-    if (isItemDragging && draggedItem) {
-        const worldPos = toWorld(e.clientX, e.clientY);
-        draggedItem.x = worldPos.x;
-        draggedItem.y = worldPos.y;
-    }
-
     // --- Hover detectie voor muren en tegels in bouwmodus ---
     if (isBuildMode) {
         hoverTarget = null;
         const wallHeight = 150;
-        const mouseWorldX = (e.clientX - (canvas.width / 2 + camX)) / scale;
-        const mouseWorldY = (e.clientY - (canvas.height / 4 + camY)) / scale;
+        const mouseWorldX = (e.clientX - (window.innerWidth / 2 + camX)) / scale;
+        const mouseWorldY = (e.clientY - (window.innerHeight / 4 + camY)) / scale;
 
         // Check top walls (van voor naar achter voor correcte selectie)
         for (let x = 0; x < mapW; x++) {
@@ -1871,6 +2630,127 @@ canvas.addEventListener("mousemove", e=>{
     } 
 });
 
+window.addEventListener("mousemove", e => {
+    // --- Logica voor verplaatsen BINNEN inventaris ---
+    if (isRearrangingInventory && activeInventoryItem) {
+        const inventory = document.getElementById("inventory");
+        const rect = inventory.getBoundingClientRect();
+        
+        // Check of we over de container zijn (voor drag-drop naar container)
+        const containerWindow = document.getElementById("containerWindow");
+        let isOverContainer = false;
+        if (containerWindow && containerWindow.style.display === 'flex') {
+             const cRect = containerWindow.getBoundingClientRect();
+             if (e.clientX >= cRect.left && e.clientX <= cRect.right && e.clientY >= cRect.top && e.clientY <= cRect.bottom) {
+                 isOverContainer = true;
+             }
+        }
+
+        // Check of de muis BUITEN de inventaris komt -> Switch naar wereld-sleep
+        if (isOverContainer || e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+            isRearrangingInventory = false;
+            
+            // Verwijder uit inventaris array
+            const index = inventoryItems.indexOf(activeInventoryItem);
+            if (index > -1) inventoryItems.splice(index, 1);
+            renderInventoryItems(); // Update UI (item verdwijnt uit lijst)
+            
+            // Start de wereld-sleep logica
+            draggedItem = activeInventoryItem;
+            isItemDragging = true;
+            isDraggingFromInventory = true;
+            draggedItemOriginalPos = null;
+            
+            // Maak het sleep-plaatje aan
+            dragImageElement = document.createElement('img');
+            dragImageElement.src = draggedItem.image.src;
+            dragImageElement.style.position = 'absolute';
+            dragImageElement.style.pointerEvents = 'none';
+            dragImageElement.style.zIndex = '9999';
+            dragImageElement.style.imageRendering = 'pixelated';
+            const w = (draggedItem.image.width || 64) * scale;
+            const h = (draggedItem.image.height || 64) * scale;
+            dragImageElement.style.width = w + 'px';
+            dragImageElement.style.left = (e.clientX - w/2) + 'px';
+            dragImageElement.style.top = (e.clientY - h/2) + 'px';
+            document.body.appendChild(dragImageElement);
+            
+            activeInventoryItem = null;
+            return;
+        }
+
+        // Zolang we BINNEN de inventaris zijn: update positie
+        const contentRect = document.getElementById("inventoryContent").getBoundingClientRect();
+        activeInventoryItem.invX = e.clientX - contentRect.left - inventoryDragOffset.x;
+        activeInventoryItem.invY = e.clientY - contentRect.top - inventoryDragOffset.y;
+        renderInventoryItems(); // Herteken de items op nieuwe posities
+    }
+
+    // Update draggedItem position if dragging (Global to allow dragging over inventory)
+    if (isItemDragging && draggedItem) {
+        const worldPos = toWorld(e.clientX, e.clientY);
+        draggedItem.x = worldPos.x;
+        draggedItem.y = worldPos.y;
+
+        if (dragImageElement) {
+            const w = (draggedItem.image.width || 64) * scale;
+            const h = (draggedItem.image.height || 64) * scale;
+            dragImageElement.style.width = w + 'px';
+            dragImageElement.style.left = (e.clientX - w/2) + 'px';
+            dragImageElement.style.top = (e.clientY - h/2) + 'px';
+        }
+    }
+});
+
+window.addEventListener("mousemove", e => {
+    // --- Logica voor verplaatsen BINNEN container ---
+    if (isRearrangingContainer && activeContainerItem) {
+        const containerWindow = document.getElementById("containerWindow");
+        const rect = containerWindow.getBoundingClientRect();
+        
+        // Check of de muis BUITEN de container komt -> Switch naar wereld-sleep
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+            isRearrangingContainer = false;
+            
+            // Verwijder uit container items array
+            const index = openContainer.items.indexOf(activeContainerItem);
+            if (index > -1) openContainer.items.splice(index, 1);
+            renderContainerItems(); 
+            
+            // Start de wereld-sleep logica
+            draggedItem = activeContainerItem;
+            isItemDragging = true;
+            isDraggingFromContainer = true;
+            isDraggingFromInventory = false;
+            isDraggingFromShop = false;
+            draggedItemOriginalPos = null;
+            
+            // Maak het sleep-plaatje aan
+            dragImageElement = document.createElement('img');
+            dragImageElement.src = draggedItem.image.src;
+            dragImageElement.style.position = 'absolute';
+            dragImageElement.style.pointerEvents = 'none';
+            dragImageElement.style.zIndex = '9999';
+            dragImageElement.style.imageRendering = 'pixelated';
+            const w = (draggedItem.image.width || 64) * scale;
+            const h = (draggedItem.image.height || 64) * scale;
+            dragImageElement.style.width = w + 'px';
+            dragImageElement.style.left = (e.clientX - w/2) + 'px';
+            dragImageElement.style.top = (e.clientY - h/2) + 'px';
+            document.body.appendChild(dragImageElement);
+            
+            activeContainerItem = null;
+            return;
+        }
+
+        // Zolang we BINNEN de container zijn: update positie
+        const contentRect = document.getElementById("containerContent").getBoundingClientRect();
+        activeContainerItem.conX = e.clientX - contentRect.left - containerDragOffset.x;
+        activeContainerItem.conY = e.clientY - contentRect.top - containerDragOffset.y;
+        renderContainerItems(); 
+    }
+});
+
 // Helper functie om te checken of een punt in een polygoon (de muur) ligt
 function isInside(x, y, vs) {
     // ray-casting algorithm
@@ -1888,18 +2768,49 @@ function isInside(x, y, vs) {
 
 
 canvas.addEventListener("mousedown", e => {
+    e.preventDefault(); // Voorkom dat de browser de canvas als afbeelding probeert te slepen (ghost image)
+    
+    // NIEUW: Check of we op een interactie-knop klikken (zoals het batje)
+    if (activeInteractionButton && e.button === 0) {
+        const mx = e.clientX;
+        const my = e.clientY;
+        if (mx >= activeInteractionButton.x && mx <= activeInteractionButton.x + activeInteractionButton.w &&
+            my >= activeInteractionButton.y && my <= activeInteractionButton.y + activeInteractionButton.h) {
+            if (activeInteractionButton.obj.name === "Pong") {
+                // Check of speler een batje heeft
+                const hasPaddle = inventoryItems.some(item => item.name && item.name.toLowerCase().includes("batje"));
+                if (hasPaddle) {
+                    startPongGame(); // Start de minigame
+                } else {
+                    showNotification("Om te kunnen tafeltennissen moet je een batje in je inventaris hebben!");
+                }
+            } else if (activeInteractionButton.obj.name === "Winkel") {
+                openShopWindow();
+            } else if (activeInteractionButton.obj.name.includes("Container")) {
+                openContainerWindow(activeInteractionButton.obj);
+            }
+            return;
+        }
+    }
+
     if (e.button === 0) { // Linkermuisknop
         // --- Logica voor verslepen van 'moveable' objecten (buiten bouwmodus) ---
         if (!isBuildMode) {
             const {x, y} = toTile(e.clientX, e.clientY);
-            const objectToDragIndex = objects.findIndex(o => o.x === x && o.y === y && o.moveable);
+            const objectToDragIndex = objects.findIndex(o => {
+                const w = o.flipped ? (o.depth || 1) : (o.width || 1);
+                const d = o.flipped ? (o.width || 1) : (o.depth || 1);
+                return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d && o.moveable;
+            });
  
             if (objectToDragIndex > -1) {
                 // Sla de staat van de vensters op VOORDAT ze gesloten worden
                 windowStatesBeforeDrag = {
                     chat: document.getElementById('chatLog').style.display,
                     inventory: document.getElementById('inventory').style.display,
-                    build: document.getElementById('buildMenu').style.display
+                    build: document.getElementById('buildMenu').style.display,
+                    shop: document.getElementById('shopWindow').style.display,
+                    container: document.getElementById('containerWindow').style.display
                 };
                 closeAllWindows(); // Sluit alle vensters bij het oppakken van een object
                 draggedObject = objects.splice(objectToDragIndex, 1)[0];
@@ -1922,7 +2833,9 @@ canvas.addEventListener("mousedown", e => {
                 windowStatesBeforeDrag = {
                     chat: document.getElementById('chatLog').style.display,
                     inventory: document.getElementById('inventory').style.display,
-                    build: document.getElementById('buildMenu').style.display
+                    build: document.getElementById('buildMenu').style.display,
+                    shop: document.getElementById('shopWindow').style.display,
+                    container: document.getElementById('containerWindow').style.display
                 };
                 closeAllWindows(); // Sluit andere vensters
 
@@ -1930,12 +2843,30 @@ canvas.addEventListener("mousedown", e => {
                 draggedItem = items.splice(itemToPickIndex, 1)[0];
                 draggedItemOriginalPos = { x: draggedItem.x, y: draggedItem.y };
                 isItemDragging = true;
+                isDraggingFromInventory = false; // Komt uit de wereld
+                isDraggingFromShop = false;
+                isDraggingFromContainer = false;
                 camSmooth = false;
+
+                // Maak een tijdelijk DOM-element aan dat de muis volgt
+                dragImageElement = document.createElement('img');
+                dragImageElement.src = draggedItem.image.src;
+                dragImageElement.style.position = 'absolute';
+                dragImageElement.style.pointerEvents = 'none'; // Zodat we erdoorheen kunnen klikken/hoveren
+                dragImageElement.style.zIndex = '9999'; // Boven alles
+                dragImageElement.style.imageRendering = 'pixelated';
+                const w = (draggedItem.image.width || 64) * scale;
+                const h = (draggedItem.image.height || 64) * scale;
+                dragImageElement.style.width = w + 'px';
+                dragImageElement.style.left = (e.clientX - w/2) + 'px';
+                dragImageElement.style.top = (e.clientY - h/2) + 'px';
+                document.body.appendChild(dragImageElement);
 
                 // Open de inventaris zodat de gebruiker de optie heeft om het item daarheen te slepen
                 inventory.style.display = 'flex';
                 renderInventoryItems();
                 console.log("Item vastgepakt!", draggedItem);
+                e.preventDefault(); // Voorkom "ghost image" van de canvas (fotokopie effect)
                 return; // Stop verdere acties na het oppakken
             }
         }
@@ -1954,7 +2885,7 @@ canvas.addEventListener("mousedown", e => {
     }
 });
 
-canvas.addEventListener("mouseup", e => {    
+window.addEventListener("mouseup", e => {    
     // Als we hier komen, was het geen object-sleep, dus het kan een klik zijn
     // of een drag die geen object betrof.
 
@@ -1963,15 +2894,73 @@ canvas.addEventListener("mouseup", e => {
 
     // --- Afhandeling van het loslaten van een versleept item ---
     if (isItemDragging && e.button === 0) {
-        const {x, y} = toTile(e.clientX, e.clientY);
-        const inventoryRect = inventory.getBoundingClientRect();
-        const isOverInventory = e.clientX >= inventoryRect.left && e.clientX <= inventoryRect.right && e.clientY >= inventoryRect.top && e.clientY <= inventoryRect.bottom;
+        // Safety check: als draggedItem om een of andere reden null is, stop dan.
+        if (!draggedItem) {
+            isItemDragging = false;
+            return;
+        }
 
-        if (isOverInventory && inventory.style.display === 'flex') { // Alleen toevoegen aan inventaris als deze open is
-            inventoryItems.push(draggedItem);
-            renderInventoryItems();
-            console.log("Item in inventaris geplaatst:", draggedItem);
-        } else {
+        if (dragImageElement) {
+            dragImageElement.remove();
+            dragImageElement = null;
+        }
+
+        const {x, y} = toTile(e.clientX, e.clientY);
+        const inventory = document.getElementById("inventory");
+        const containerWindow = document.getElementById("containerWindow");
+        let droppedInInventory = false;
+
+        // Als we vanuit de inventaris slepen, check dan EERST de container.
+        // Dit voorkomt dat het item terug in de inventaris valt als de vensters overlappen.
+        if (isDraggingFromInventory && !droppedInInventory && containerWindow && containerWindow.style.display === 'flex' && openContainer) {
+            const containerRect = containerWindow.getBoundingClientRect();
+            const isOverContainer = e.clientX >= containerRect.left && e.clientX <= containerRect.right && e.clientY >= containerRect.top && e.clientY <= containerRect.bottom;
+            
+            if (isOverContainer) {
+                // Bereken positie in container
+                const contentRect = document.getElementById("containerContent").getBoundingClientRect();
+                draggedItem.conX = e.clientX - contentRect.left - 50;
+                draggedItem.conY = e.clientY - contentRect.top - 50;
+                openContainer.items.push(draggedItem);
+                renderContainerItems();
+                droppedInInventory = true;
+            }
+        }
+
+        if (inventory && inventory.style.display === 'flex') {
+             const inventoryRect = inventory.getBoundingClientRect();
+             const isOverInventory = e.clientX >= inventoryRect.left && e.clientX <= inventoryRect.right && e.clientY >= inventoryRect.top && e.clientY <= inventoryRect.bottom;
+             
+             if (isOverInventory) {
+                 if (draggedItem.type === 'currency' || draggedItem.type === 'currency_big') {
+                     let amount = 0;
+                     if (draggedItem.type === 'currency') {
+                         // Random bedrag tussen 0.05 en 20.00 in stappen van 0.05
+                         const steps = Math.floor(Math.random() * 400) + 1; // 1 tot 400
+                         amount = steps * 0.05;
+                     } else {
+                         // Random bedrag tussen 25.00 en 100.00 in stappen van 0.05
+                         const steps = Math.floor(Math.random() * 1501); // 0 tot 1500 (75 / 0.05)
+                         amount = 25 + (steps * 0.05);
+                     }
+                     
+                     addToWallet(amount);
+                     console.log("Geld toegevoegd:", amount.toFixed(2));
+                 } else {
+                     // Bereken positie in inventaris op basis van muis
+                     const contentRect = document.getElementById("inventoryContent").getBoundingClientRect();
+                     draggedItem.invX = e.clientX - contentRect.left - 50; // Centreer op muis (100/2)
+                     draggedItem.invY = e.clientY - contentRect.top - 50;
+                     
+                     inventoryItems.push(draggedItem);
+                     renderInventoryItems();
+                     console.log("Item in inventaris geplaatst:", draggedItem);
+                 }
+                 droppedInInventory = true;
+             }
+        }
+
+        if (!droppedInInventory) {
             const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
             const isOccupiedByObject = isBlocked(x, y);
             const isOccupiedByItem = isItemOccupied(x, y);
@@ -1980,19 +2969,42 @@ canvas.addEventListener("mouseup", e => {
             if (isValidPlacement) {
                 draggedItem.x = x + 0.5;
                 draggedItem.y = y + 0.5;
+                
+                // BONUS: Laat het item stuiteren bij plaatsen
+                draggedItem.z = 60; // Start hoogte (pixels)
+                draggedItem.vz = 0; // Start snelheid
+                
                 items.push(draggedItem);
                 console.log("Item teruggeplaatst op kaart:", draggedItem);
-        } else {
-            // Plaats terug op de originele positie als de nieuwe plek ongeldig is
-            draggedItem.x = draggedItemOriginalPos.x;
-            draggedItem.y = draggedItemOriginalPos.y;
-            items.push(draggedItem);
-            console.log("Ongeldige plaatsing, item terug naar originele plek:", draggedItem);
-        }
+            } else {
+                // Als de plaatsing ongeldig is:
+                if (isDraggingFromInventory) {
+                    // Terug naar inventaris als het daar vandaan kwam
+                    inventoryItems.push(draggedItem);
+                    renderInventoryItems();
+                } else if (isDraggingFromShop) {
+                    // Terug naar winkel uitgifte
+                    shopOutputItems.push(draggedItem);
+                    renderShopOutput();
+                } else if (isDraggingFromContainer && openContainer) {
+                    // Terug naar container
+                    openContainer.items.push(draggedItem);
+                    renderContainerItems();
+                } else {
+                    // Terug naar oude plek in de wereld
+                    draggedItem.x = draggedItemOriginalPos.x;
+                    draggedItem.y = draggedItemOriginalPos.y;
+                    items.push(draggedItem);
+                }
+                console.log("Ongeldige plaatsing, item teruggezet.");
+            }
         }
 
         // Reset alle sleep-gerelateerde variabelen voor items
         isItemDragging = false;
+        isDraggingFromInventory = false;
+        isDraggingFromShop = false;
+        isDraggingFromContainer = false;
         draggedItem = null;
         draggedItemOriginalPos = null;
 
@@ -2000,18 +3012,38 @@ canvas.addEventListener("mouseup", e => {
         if (windowStatesBeforeDrag) {
             if (windowStatesBeforeDrag.chat) document.getElementById('chatLog').style.display = windowStatesBeforeDrag.chat;
             // We laten de inventory open als die al open was, of als we er iets in hebben gesleept.
-            if (windowStatesBeforeDrag.inventory === 'flex' || isOverInventory) {
-                 inventory.style.display = 'flex';
+            if (windowStatesBeforeDrag.inventory === 'flex' || droppedInInventory) {
+                 if(inventory) inventory.style.display = 'flex';
             } else {
-                 inventory.style.display = 'none';
+                 if(inventory) inventory.style.display = 'none';
             }
             if (windowStatesBeforeDrag.build === 'flex') {
-                buildBtn.click();
+                if (!isBuildMode) buildBtn.click();
+            }
+            if (windowStatesBeforeDrag.shop === 'flex') {
+                document.getElementById('shopWindow').style.display = 'flex';
+            }
+            if (windowStatesBeforeDrag.container === 'flex') {
+                document.getElementById('containerWindow').style.display = 'flex';
             }
             windowStatesBeforeDrag = null;
         }
         return; // Belangrijk: stop verdere uitvoering
     }
+
+    // Stop met herschikken in inventaris
+    if (isRearrangingInventory) {
+        isRearrangingInventory = false;
+        activeInventoryItem = null;
+    }
+    
+    if (isRearrangingContainer) {
+        isRearrangingContainer = false;
+        activeContainerItem = null;
+    }
+
+    // Voor de volgende acties (bouwen, lopen) moet de muis op het canvas zijn
+    if (e.target !== canvas) return;
 
     // Als we in bouwmodus zijn en het een klik was, handel de tool-actie af
     if (e.button === 0 && isBuildMode && Math.sqrt(dx*dx + dy*dy) < 5) { // Alleen uitvoeren bij linkermuisknop
@@ -2019,15 +3051,27 @@ canvas.addEventListener("mouseup", e => {
 
         // Plaatsen kan op een tegel (x/y >= 0) of op een muur (hoverTarget.type === 'wall')
         if (activeBuildCategory === 'objecten' && ((x >= 0 && y >= 0) || hoverTarget?.type === 'wall')) {
-            const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
-            const isOccupied = isBlocked(x, y);
-            const isItemTileOccupied = isItemOccupied(x, y);
-
+            // Check geldigheid voor plaatsing (rekening houdend met width/depth)
+            const checkPlacement = (bx, by, obj, flipped) => {
+                const w = flipped ? (obj.depth || 1) : (obj.width || 1);
+                const d = flipped ? (obj.width || 1) : (obj.depth || 1);
+                for(let dx = 0; dx < w; dx++) {
+                    for(let dy = 0; dy < d; dy++) {
+                        const tx = bx + dx;
+                        const ty = by + dy;
+                        if (tx >= mapW || ty >= mapH || isBlocked(tx, ty) || isItemOccupied(tx, ty) || (Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)) return false;
+                    }
+                }
+                return true;
+            };
+            
             // --- Object Tool Logica ---
             switch (buildTool) {
                 case 'place':
-                    if (selectedBuildObject?.placement === 'floor' && !isOccupied && !playerOnTile && !isItemTileOccupied && selectedBuildObject.name) {
-                        objects.push({ ...selectedBuildObject, x: x, y: y, flipped: isBuildObjectFlipped });
+                    if (selectedBuildObject?.placement === 'floor' && selectedBuildObject.name) {
+                        if (checkPlacement(x, y, selectedBuildObject, isBuildObjectFlipped)) {
+                            objects.push({ ...selectedBuildObject, x: x, y: y, flipped: isBuildObjectFlipped });
+                        }
                     } else if (selectedBuildObject?.placement === 'wall' && hoverTarget?.type === 'wall') {
                         const wallId = hoverTarget.id; // De ID van de muur waar we op klikken
                         const isWallOccupied = wallObjects.some(wo => wo.wallId === wallId);
@@ -2038,14 +3082,18 @@ canvas.addEventListener("mouseup", e => {
                     break;
                 case 'move':
                     if (movingObject) {
-                        if (!isOccupied && !playerOnTile && !isItemTileOccupied) {
+                        if (checkPlacement(x, y, movingObject, movingObject.flipped)) {
                             movingObject.x = x;
                             movingObject.y = y;
                             objects.push(movingObject); // Voeg terug toe aan de lijst
                             movingObject = null; // Stop met verplaatsen
                         }
                     } else { // Anders, pak een object op
-                        const objectToMoveIndex = objects.findIndex(o => o.x === x && o.y === y);
+                        const objectToMoveIndex = objects.findIndex(o => {
+                            const w = o.flipped ? (o.depth || 1) : (o.width || 1);
+                            const d = o.flipped ? (o.width || 1) : (o.depth || 1);
+                            return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+                        });
                         if (objectToMoveIndex > -1) {
                             movingObject = objects.splice(objectToMoveIndex, 1)[0];
                             closeSecondaryWindows(); // Sluit andere vensters bij het oppakken
@@ -2054,7 +3102,11 @@ canvas.addEventListener("mouseup", e => {
                     }
                     break;
                 case 'delete':
-                    const objectToDeleteIndex = objects.findIndex(o => o.x === x && o.y === y);
+                    const objectToDeleteIndex = objects.findIndex(o => {
+                        const w = o.flipped ? (o.depth || 1) : (o.width || 1);
+                        const d = o.flipped ? (o.width || 1) : (o.depth || 1);
+                        return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+                    });
                     if (objectToDeleteIndex > -1) {
                         objects.splice(objectToDeleteIndex, 1);
                     } else if (hoverTarget?.type === 'wall') {
@@ -2171,22 +3223,7 @@ canvas.addEventListener("mouseup", e => {
 canvas.addEventListener("mouseleave", e => {
     isCameraDragging = false;
     isObjectDragging = false;
-    // NIEUW: Reset item dragging state bij mouseleave
-    if (isItemDragging && draggedItem) {
-        items.push(draggedItemOriginalPos); // Zet item terug op originele plek
-        isItemDragging = false;
-        draggedItem = null;
-        draggedItemOriginalPos = null;
-        // Heropen de vensters die open stonden
-        if (windowStatesBeforeDrag) {
-            if (windowStatesBeforeDrag.chat) document.getElementById('chatLog').style.display = windowStatesBeforeDrag.chat;
-            if (windowStatesBeforeDrag.inventory) document.getElementById('inventory').style.display = windowStatesBeforeDrag.inventory;
-            if (windowStatesBeforeDrag.build === 'flex') {
-                buildBtn.click();
-            }
-            windowStatesBeforeDrag = null;
-        }
-    }
+    // Item dragging wordt niet gereset bij mouseleave, zodat we naar de inventory kunnen slepen
 });
 
 // Rechtermuisklik om bouwselectie te annuleren
@@ -2214,8 +3251,29 @@ canvas.addEventListener("contextmenu", e => {
         }
         // NIEUW: Annuleer item slepen met rechtermuisklik
         if (isItemDragging && draggedItem) {
-            items.push(draggedItemOriginalPos); // Zet item terug
+            if (dragImageElement) {
+                dragImageElement.remove();
+                dragImageElement = null;
+            }
+            
+            if (isDraggingFromInventory) {
+                inventoryItems.push(draggedItem);
+                renderInventoryItems();
+            } else {
+                draggedItem.x = draggedItemOriginalPos.x;
+                draggedItem.y = draggedItemOriginalPos.y;
+                items.push(draggedItem); // Zet item terug
+            }
             isItemDragging = false;
+            isDraggingFromInventory = false;
+            if (isDraggingFromShop) {
+                shopOutputItems.push(draggedItem);
+                renderShopOutput();
+            }
+            if (isDraggingFromContainer && openContainer) {
+                openContainer.items.push(draggedItem);
+                renderContainerItems();
+            }
             draggedItem = null;
             draggedItemOriginalPos = null;
             // Heropen de vensters die open stonden
@@ -2225,12 +3283,143 @@ canvas.addEventListener("contextmenu", e => {
                 if (windowStatesBeforeDrag.build === 'flex') {
                     buildBtn.click();
                 }
+                if (windowStatesBeforeDrag.shop === 'flex') {
+                    document.getElementById('shopWindow').style.display = 'flex';
+                }
                 windowStatesBeforeDrag = null;
             }
         }
     }
 });
 
+// ─────────────────────────────────────────────
+// 🏪 WINKEL LOGICA
+// ─────────────────────────────────────────────
+const shopCatalog = [
+    { name: "Blok", image: itemImg, price: 5.00, mass: 1.2 },
+    { name: "Bal", image: itemRoundImg, price: 5.00, mass: 0.8, canRotate: true },
+    { name: "Stok", image: itemStickImg, price: 2.50, mass: 0.4, canTopple: true },
+    { name: "Batje Rood", image: batjeRoodImg, price: 15.00, mass: 0.4, canTopple: true },
+    { name: "Batje Zwart", image: batjeZwartImg, price: 15.00, mass: 0.4, canTopple: true }
+];
+
+function openShopWindow() {
+    const shopWindow = document.getElementById('shopWindow');
+    shopWindow.style.display = 'flex';
+    renderShopItems();
+    renderShopOutput();
+    
+    // Open ook de inventory voor gemak
+    inventory.style.display = 'flex';
+    renderInventoryItems();
+}
+
+document.getElementById('closeShopBtn').addEventListener('click', () => {
+    document.getElementById('shopWindow').style.display = 'none';
+});
+
+function renderShopItems() {
+    const content = document.getElementById('shopContent');
+    content.innerHTML = '';
+    
+    shopCatalog.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'build-item'; // Hergebruik stijl
+        div.style.height = 'auto';
+        div.style.minHeight = '90px';
+        div.innerHTML = `
+            <img src="${item.image.src}" style="height: 48px; object-fit: contain;">
+            <div style="text-align:center;">
+                <div>${item.name}</div>
+                <div style="color: #4cd137; font-weight: bold;">€${item.price.toFixed(2)}</div>
+            </div>
+        `;
+        
+        div.onclick = () => buyItem(item);
+        content.appendChild(div);
+    });
+}
+
+function buyItem(template) {
+    if (walletBalance >= template.price) {
+        addToWallet(-template.price);
+        
+        // Maak een nieuw item aan
+        const newItem = {
+            ...template, // Kopieer eigenschappen
+            x: 0, y: 0, vx: 0, vy: 0, z: 0, vz: 0, rotation: 0, vr: 0
+        };
+        
+        shopOutputItems.push(newItem);
+        renderShopOutput();
+    } else {
+        showNotification("Niet genoeg geld!");
+    }
+}
+
+function renderShopOutput() {
+    const output = document.getElementById('shopOutput');
+    output.innerHTML = '';
+    
+    shopOutputItems.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'inventory-item';
+        div.style.width = '64px';
+        div.style.height = '64px';
+        div.innerHTML = `<img src="${item.image.src}">`;
+        
+        div.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            if (e.button === 0) {
+                // Haal uit shop output
+                shopOutputItems.splice(index, 1);
+                renderShopOutput();
+                
+                // Start slepen
+                draggedItem = item;
+                isItemDragging = true;
+                isDraggingFromShop = true;
+                isDraggingFromInventory = false;
+                draggedItemOriginalPos = null;
+                
+                // Visueel element
+                dragImageElement = document.createElement('img');
+                dragImageElement.src = draggedItem.image.src;
+                dragImageElement.style.position = 'absolute';
+                dragImageElement.style.pointerEvents = 'none';
+                dragImageElement.style.zIndex = '9999';
+                dragImageElement.style.imageRendering = 'pixelated';
+                const w = (draggedItem.image.width || 64) * scale;
+                const h = (draggedItem.image.height || 64) * scale;
+                dragImageElement.style.width = w + 'px';
+                dragImageElement.style.left = (e.clientX - w/2) + 'px';
+                dragImageElement.style.top = (e.clientY - h/2) + 'px';
+                document.body.appendChild(dragImageElement);
+            }
+        });
+        
+        output.appendChild(div);
+    });
+}
+
+// Sleep logica voor shop header
+const shopWindow = document.getElementById('shopWindow');
+const shopHeader = document.getElementById('shopHeader');
+let isDraggingShop = false;
+let dragStartShop = {x:0, y:0};
+let shopStartPos = {x:0, y:0};
+
+shopHeader.addEventListener("mousedown", (e) => {
+    bringToFront(shopWindow);
+    isDraggingShop = true;
+    dragStartShop = {x: e.clientX, y: e.clientY};
+    const rect = shopWindow.getBoundingClientRect();
+    // Reset transform voor absoluut slepen
+    shopWindow.style.transform = "none";
+    shopWindow.style.left = rect.left + "px";
+    shopWindow.style.top = rect.top + "px";
+    shopStartPos = {x: rect.left, y: rect.top};
+});
 
 // Zoom knoppen
 document.getElementById("zoomIn").addEventListener("click", ()=> {
@@ -2279,6 +3468,107 @@ function updateCamera(delta){
     }
 }
 
+window.addEventListener("mousemove", (e) => {
+    if (!isDraggingShop) return;
+
+    const dx = e.clientX - dragStartShop.x;
+    const dy = e.clientY - dragStartShop.y;
+
+    const newX = Math.max(0, Math.min(shopStartPos.x + dx, window.innerWidth - shopWindow.offsetWidth));
+    const newY = Math.max(0, Math.min(shopStartPos.y + dy, window.innerHeight - shopWindow.offsetHeight));
+
+    shopWindow.style.left = newX + "px";
+    shopWindow.style.top  = newY + "px";
+});
+
+// ─────────────────────────────────────────────
+// 📦 CONTAINER LOGICA
+// ─────────────────────────────────────────────
+let openContainer = null; // Het container object dat momenteel open is
+
+function openContainerWindow(obj) {
+    openContainer = obj;
+    // Initialiseer items array als die nog niet bestaat
+    if (!openContainer.items) {
+        openContainer.items = [];
+    }
+    
+    const containerWindow = document.getElementById('containerWindow');
+    
+    // Update de titel van het venster
+    containerWindow.querySelector('#containerHeader span').textContent = obj.name;
+    
+    // Check welk type container het is voor de grootte van het venster
+    if (obj.name === "Grote Container" || obj.name === "Brede Container") {
+        containerWindow.style.width = "400px"; // Breder voor 3 kolommen
+        obj.columns = 3;
+    } else {
+        containerWindow.style.width = "260px"; // Standaard 2 kolommen
+        obj.columns = 2;
+    }
+
+    containerWindow.style.display = 'flex';
+    renderContainerItems();
+    
+    // Open ook de inventory voor gemak
+    inventory.style.left = "150px"; // Reset positie voor netheid
+    inventory.style.display = 'flex';
+    renderInventoryItems();
+}
+
+document.getElementById('closeContainerBtn').addEventListener('click', () => {
+    document.getElementById('containerWindow').style.display = 'none';
+    openContainer = null;
+});
+
+function renderContainerItems() {
+    if (!openContainer) return;
+    const content = document.getElementById('containerContent');
+    content.innerHTML = '';
+    
+    const cols = openContainer.columns || 2; // Default naar 2 als niet ingesteld
+
+    openContainer.items.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "inventory-item";
+        const imgSrc = item.image ? item.image.src : '';
+        
+        // Default positie als die er nog niet is
+        if (item.conX === undefined) {
+            item.conX = (index % cols) * 110 + 20;
+            item.conY = Math.floor(index / cols) * 110 + 20;
+        }
+        
+        div.style.position = 'absolute';
+        div.style.left = item.conX + 'px';
+        div.style.top = item.conY + 'px';
+        div.innerHTML = `<img src="${imgSrc}">`;
+        
+        div.addEventListener("mousedown", (e) => {
+            // Breng item naar voorgrond
+            div.style.zIndex = ++highestContainerZ;
+            
+            // Update array volgorde
+            const idx = openContainer.items.indexOf(item);
+            if (idx > -1) {
+                openContainer.items.push(openContainer.items.splice(idx, 1)[0]);
+            }
+
+            e.preventDefault();
+            if (e.button === 0) {
+                // Start met verplaatsen BINNEN de container
+                isRearrangingContainer = true;
+                activeContainerItem = item;
+                
+                const rect = div.getBoundingClientRect();
+                containerDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+                e.stopPropagation();
+            }
+        });
+        content.appendChild(div);
+    });
+}
+
 function updateItems(delta) {
     const friction = 0.92; // Hoe snel items afremmen (dichter bij 1 is minder frictie)
 
@@ -2297,6 +3587,44 @@ function updateItems(delta) {
         // Stop beweging als de snelheid heel laag is om eindeloos glijden te voorkomen
         if (Math.abs(item.vx) < 0.001) item.vx = 0;
         if (Math.abs(item.vy) < 0.001) item.vy = 0;
+
+        // --- BONUS: Stuiter Logica (Z-as) ---
+        // Pas zwaartekracht toe als het item in de lucht is of snelheid heeft
+        if ((item.z && item.z > 0) || (item.vz && item.vz !== 0)) {
+            item.vz -= 2.0 * delta; // Zwaartekracht
+            item.z += item.vz * delta;
+
+            if (item.z < 0) {
+                item.z = 0;
+                item.vz *= -0.6; // Stuiter demping (hoeveel energie blijft over)
+                if (Math.abs(item.vz) < 2) item.vz = 0; // Stop met stuiteren bij lage snelheid
+            }
+        }
+
+        // --- Rotatie Logica ---
+        if (item.canRotate) {
+            item.rotation += item.vr * delta;
+            item.vr *= 0.95; // Wrijving op rotatie
+        }
+
+        // --- Topple Logica (Omvallen) ---
+        if (item.canTopple) {
+            item.rotation += item.vr * delta;
+            
+            // Zwaartekracht effect: trek naar +/- 90 graden (PI/2) als hij niet rechtop staat
+            if (Math.abs(item.rotation) < Math.PI / 2) {
+                 // Hoe schuiner, hoe sneller hij valt (sinus van de hoek)
+                 // We voegen een klein beetje 'wiebel' toe als hij bijna recht staat
+                 item.vr += Math.sin(item.rotation) * 0.02 * delta;
+                 item.vr *= 0.99; // Luchtweerstand
+            } else {
+                // Raakt de grond (clamp op 90 graden)
+                item.rotation = Math.sign(item.rotation) * Math.PI / 2;
+                item.vr *= -0.3; // Stuiter een beetje terug
+                if(Math.abs(item.vr) < 0.01) item.vr = 0; // Stop met stuiteren
+                item.vr *= 0.8; // Wrijving op de grond
+            }
+        }
 
         // Simpele muur-collision
         if (item.x < 0.5) { item.x = 0.5; item.vx *= -0.5; }
@@ -2369,8 +3697,50 @@ function updateBall(delta) {
             const angle = Math.atan2(dy, dx);
             item.vx += Math.cos(angle) * pushForce;
             item.vy += Math.sin(angle) * pushForce;
+
+            // Laat ronde items draaien als je ertegenaan loopt
+            if (item.canRotate) {
+                item.vr += (Math.random() - 0.5) * 0.5; // Geef een willekeurige draai
+            }
+            
+            // Laat topple items omvallen als je ertegenaan loopt
+            if (item.canTopple) {
+                item.vr += (Math.random() - 0.5) * 0.2; // Geef een zetje om balans te verstoren
+            }
         }
     });
+
+    // --- Check afstand tot open interacties (Winkel / Container) ---
+    const shopWindow = document.getElementById('shopWindow');
+    const containerWindow = document.getElementById('containerWindow');
+    const maxDistance = 1.5; // Maximale afstand in tegels voordat venster sluit
+
+    // Check Winkel
+    if (shopWindow.style.display === 'flex') {
+        // Zoek de dichtstbijzijnde winkel
+        // (In een echte game zou je bijhouden WELKE winkel open is, maar dit werkt voor nu)
+        const nearestShop = objects.find(o => o.name === "Winkel" && Math.abs(o.x - ball.x) < 5 && Math.abs(o.y - ball.y) < 5);
+        if (nearestShop) {
+            const dx = nearestShop.x - ball.x;
+            const dy = nearestShop.y - ball.y;
+            // Gebruik manhattan distance of euclidische afstand naar de rand van het object
+            // Simpele check: afstand tot het midden van het object
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist > maxDistance + 1) { // +1 marge voor de grootte van het object
+                shopWindow.style.display = 'none';
+            }
+        }
+    }
+
+    // Check Container
+    if (containerWindow.style.display === 'flex' && openContainer) {
+        const dx = openContainer.x - ball.x;
+        const dy = openContainer.y - ball.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > maxDistance + 1) {
+             document.getElementById('closeContainerBtn').click(); // Gebruik de sluit-knop logica
+        }
+    }
 }
 
 let isDraggingChat = false;
@@ -2474,6 +3844,35 @@ window.addEventListener("mousemove", (e) => {
     inventory.style.top  = newY + "px";
 });
 
+// Sleep logica voor container header
+const containerWindow = document.getElementById('containerWindow');
+const containerHeader = document.getElementById('containerHeader');
+let isDraggingContainer = false;
+let dragStartContainer = {x:0, y:0};
+let containerStartPos = {x:0, y:0};
+
+containerHeader.addEventListener("mousedown", (e) => {
+    bringToFront(containerWindow);
+    isDraggingContainer = true;
+    dragStartContainer = {x: e.clientX, y: e.clientY};
+    const rect = containerWindow.getBoundingClientRect();
+    containerWindow.style.left = rect.left + "px";
+    containerWindow.style.top = rect.top + "px";
+    containerStartPos = {x: rect.left, y: rect.top};
+    e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+    if (!isDraggingContainer) return;
+
+    const dx = e.clientX - dragStartContainer.x;
+    const dy = e.clientY - dragStartContainer.y;
+    const newX = Math.max(0, Math.min(containerStartPos.x + dx, window.innerWidth - containerWindow.offsetWidth));
+    const newY = Math.max(0, Math.min(containerStartPos.y + dy, window.innerHeight - containerWindow.offsetHeight));
+    containerWindow.style.left = newX + "px";
+    containerWindow.style.top  = newY + "px";
+});
+
 window.addEventListener("mouseup", (e) => {
     // Als we een object aan het slepen waren, handel dat eerst af.
     if (isObjectDragging) {
@@ -2485,6 +3884,9 @@ window.addEventListener("mouseup", (e) => {
     isDraggingChat = false;
     isDraggingBuild = false;
     isDraggingInventory = false;
+    isDraggingPong = false; // Stop pong slepen
+    isDraggingShop = false;
+    isDraggingContainer = false;
 
     // Stop met het slepen van de camera (rechtermuisknop)
     if (e.button === 2) {
@@ -2495,9 +3897,18 @@ window.addEventListener("mouseup", (e) => {
     if (isObjectDragging && e.button === 0) { // Alleen voor linkermuisknop
         const {x, y} = toTile(e.clientX, e.clientY);
         const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
-        // Check voor 'isBlocked' zonder het object dat we slepen mee te rekenen
-        const isOccupied = objects.some(o => o.x === x && o.y === y);
-        const isValidPlacement = x >= 0 && x < mapW && y >= 0 && y < mapH && !isOccupied && !playerOnTile;
+        
+        // Check geldigheid (rekening houdend met width/depth)
+        const w = draggedObject.flipped ? (draggedObject.depth || 1) : (draggedObject.width || 1);
+        const d = draggedObject.flipped ? (draggedObject.width || 1) : (draggedObject.depth || 1);
+        let isValidPlacement = true;
+        for(let dx = 0; dx < w; dx++) {
+            for(let dy = 0; dy < d; dy++) {
+                const tx = x + dx;
+                const ty = y + dy;
+                if (tx >= mapW || ty >= mapH || isBlocked(tx, ty) || (Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)) isValidPlacement = false;
+            }
+        }
 
         if (isValidPlacement) {
             draggedObject.x = x;
@@ -2541,6 +3952,43 @@ window.addEventListener("mouseup", (e) => {
     }
 });
 
+// --- Sleep Logica voor Pong Game ---
+const pongGame = document.getElementById('pongGame');
+const pongHeader = document.getElementById('pongHeader');
+let isDraggingPong = false;
+let dragStartPong = {x:0, y:0};
+let pongStartPos = {x:0, y:0};
+
+pongHeader.addEventListener("mousedown", (e) => {
+    if (pongRunning) return; // Niet slepen tijdens het spelen
+    if (e.target.closest('.close-btn')) return; // Niet slepen als we op sluiten klikken
+
+    isDraggingPong = true;
+    dragStartPong = {x: e.clientX, y: e.clientY};
+    
+    // Omdat pongGame standaard gecentreerd is met transform, moeten we dit omzetten naar absolute posities
+    // bij de eerste keer slepen, anders verspringt hij.
+    const rect = pongGame.getBoundingClientRect();
+    pongGame.style.transform = "none"; // Verwijder de centrering
+    pongGame.style.left = rect.left + "px";
+    pongGame.style.top = rect.top + "px";
+    
+    pongStartPos = {x: rect.left, y: rect.top};
+    e.preventDefault();
+});
+
+window.addEventListener("mousemove", (e) => {
+    if (!isDraggingPong) return;
+
+    const dx = e.clientX - dragStartPong.x;
+    const dy = e.clientY - dragStartPong.y;
+
+    const newX = Math.max(0, Math.min(pongStartPos.x + dx, window.innerWidth - pongGame.offsetWidth));
+    const newY = Math.max(0, Math.min(pongStartPos.y + dy, window.innerHeight - pongGame.offsetHeight));
+
+    pongGame.style.left = newX + "px";
+    pongGame.style.top  = newY + "px";
+});
 
 
 // Initieel renderen van de bouw-items (ook al is het menu verborgen)
@@ -2575,7 +4023,9 @@ function loop(time) {
     const delta = deltaTime / (1000 / 60); // delta is ~1.0 bij 60fps
     lastTime = time;
 
-    ctx.setTransform(1,0,0,1,0,0);
+    // Reset transform naar fysieke pixels (inclusief DPR)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = false; // Standaard voor de hele frame: scherpe pixels
 
     // --- Camera pan tijdens slepen van object ---
     if (isObjectDragging) { // Gebruik de nieuwe variabele
@@ -2593,12 +4043,13 @@ function loop(time) {
     }
     // --- Einde camera pan ---
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+    // Clear het hele scherm (gebruik logische coordinaten omdat dpr in transform zit)
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
     ctx.setTransform(
-        scale, 0, 0, scale,
-        canvas.width / 2 + camX,
-        canvas.height / 4 + camY
+        scale * dpr, 0, 0, scale * dpr,
+        (window.innerWidth / 2 + camX) * dpr,
+        (window.innerHeight / 4 + camY) * dpr
     );
 
     drawTiles();
@@ -2615,21 +4066,34 @@ function loop(time) {
 
     // Voeg objecten toe aan de renderlijst
     objects.forEach(obj => {
-        // De 3 tegels achter het object waar de speler "achter" het object zou staan
-        let behindTiles = [
-            { x: obj.x, y: obj.y - 1 },     // Direct achter (boven)
-            { x: obj.x - 1, y: obj.y },     // Links-achter
-            { x: obj.x - 1, y: obj.y - 1 }  // Links-boven-achter
-        ];
+        const w = obj.flipped ? (obj.depth || 1) : (obj.width || 1);
+        const d = obj.flipped ? (obj.width || 1) : (obj.depth || 1);
+        
+        // Genereer dynamisch de lijst met tegels die "achter" dit object liggen
+        // Dit zijn de tegels direct ten noorden (y-1) en westen (x-1) van de bounding box
+        let behindTiles = [];
+        
+        // Rij boven het object
+        for(let i = 0; i < w; i++) {
+            behindTiles.push({ x: obj.x + i, y: obj.y - 1 });
+        }
+        // Kolom links van het object
+        for(let j = 0; j < d; j++) {
+            behindTiles.push({ x: obj.x - 1, y: obj.y + j });
+        }
+        // De hoek linksboven
+        behindTiles.push({ x: obj.x - 1, y: obj.y - 1 });
 
-        // Voor hoge objecten, voeg een extra rij tegels toe
+        // Voor hoge objecten voegen we extra tegels toe (simpele benadering)
         if (obj.height === 2) {
             behindTiles.push({ x: obj.x - 1, y: obj.y - 2 }); // Twee boven, een links (209)
             behindTiles.push({ x: obj.x - 2, y: obj.y - 2 }); // Twee boven, twee links (208)
             behindTiles.push({ x: obj.x - 2, y: obj.y - 1 }); // Een boven, twee links (233)
         }
 
+        // Check of speler achter het object staat OF in het object staat (voor tile 106/131 etc)
         const isPlayerBehind = behindTiles.some(t => playerTileX === t.x && playerTileY === t.y);
+        const isPlayerInside = playerTileX >= obj.x && playerTileX < obj.x + w && playerTileY >= obj.y && playerTileY < obj.y + d;
 
         // Check of een item achter het object staat
         const isItemBehind = items.some(item => {
@@ -2637,37 +4101,68 @@ function loop(time) {
             const itemTileY = Math.floor(item.y);
             return behindTiles.some(t => itemTileX === t.x && itemTileY === t.y);
         });
+        
+        // Bepaal de sorteersleutel op basis van het midden van het object voor betere sortering
+        const sortKey = (obj.x + (w - 1) / 2) + (obj.y + (d - 1) / 2);
 
         // Voeg het object toe aan de lijst
         renderList.push({
             type: 'object',
-            x: obj.x,
-            y: obj.y,
+            // We gebruiken nu een expliciete sortKey ipv x/y
+            sortKey: sortKey,
+            x: obj.x, // Voor debug/referentie
+            y: obj.y, // Voor debug/referentie
             draw: () => {
-                const { sx, sy } = toScreen(obj.x, obj.y);
-                // Maak object transparant als de speler erachter staat
-                ctx.globalAlpha = (isPlayerBehind || isItemBehind) ? 0.5 : 1;
+                const centerX = obj.x + (w - 1) / 2;
+                const centerY = obj.y + (d - 1) / 2;
+                const { sx, sy } = toScreen(centerX, centerY);
+                // Maak object transparant als de speler erachter staat OF erin staat
+                ctx.globalAlpha = (isPlayerBehind || isPlayerInside || isItemBehind) ? 0.5 : 1;
 
                 const isTall = obj.height === 2;
-                let img = isTall ? objectImg96 : objectImg;
-                const imgHeight = isTall ? 96 : 64;
-                let finalImg = img;
+                const isWide = obj.width === 2; // Check voor brede objecten
+                let finalImg;
 
-                if (obj.moveable) {
-                    finalImg = moveableObjectImg;
+                if (obj.name === "Pong") {
+                    finalImg = pongImg;
+                } else if (obj.name === "Winkel") {
+                    finalImg = winkelImg;
+                } else if (obj.name === "Container") {
+                    finalImg = containerImg;
+                } else if (obj.name === "Grote Container") {
+                    finalImg = containerImg96;
+                } else if (obj.name === "Brede Container") {
+                    finalImg = containerImg96B;
+                } else if (obj.moveable) {
+                    finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
+                } else {
+                    if (isWide) {
+                        finalImg = objectImg96B;
+                    } else if (isTall) {
+                        finalImg = objectImg96;
+                    } else {
+                        finalImg = objectImg;
+                    }
                 }
+
+                const imgWidth = finalImg.width || 64; // Gebruik de werkelijke breedte
+                const imgHeight = finalImg.height || (isTall ? 96 : 64); // Gebruik de werkelijke hoogte
 
                 if (obj.flipped) {
                     ctx.save();
                     ctx.scale(-1, 1);
                 }
 
+                // Bereken de verticale offset op basis van de dimensies zodat het object netjes op de vloer staat
+                const totalDim = (obj.width || 1) + (obj.depth || 1);
+                const verticalOffset = totalDim * 8 + 16;
+
                 ctx.drawImage(
                     finalImg,
-                    obj.flipped ? -sx - 32 : sx - 32, // horizontaal centreren
-                    sy - imgHeight + tileH, // verticale correctie
-                    64,
-                    imgHeight
+                    obj.flipped ? -sx - imgWidth/2 : sx - imgWidth/2, // horizontaal centreren op basis van breedte
+                    sy - imgHeight + verticalOffset, // Dynamische verticale correctie
+                    imgWidth, // Gebruik dynamische breedte
+                    imgHeight // Gebruik dynamische hoogte
                 );
                 ctx.globalAlpha = 1;
                 if (obj.flipped) {
@@ -2684,82 +4179,112 @@ function loop(time) {
 
         renderList.push({
             type: 'item',
-            x: Math.floor(item.x), // Gebruik de tegelcoördinaat voor sortering
-            y: Math.floor(item.y), // Gebruik de tegelcoördinaat voor sortering
+            sortKey: Math.floor(item.x) + Math.floor(item.y),
             draw: () => {
                 const { sx, sy } = toScreen(item.x, item.y);
-                ctx.drawImage(
-                    item.image,
-                    sx - item.image.width / 2, // Horizontaal centreren
-                    sy - item.image.height / 2 // Verticaal centreren op de tegel
-                );
+                
+                // Bereken de tekenpositie inclusief de stuiter-hoogte (z)
+                const drawY = sy - (item.z || 0);
+
+                ctx.save();
+                // Verplaats naar het midden van waar het item getekend moet worden
+                ctx.translate(sx, drawY);
+                // Roteer als het item dat kan
+                if (item.canRotate) {
+                    ctx.rotate(item.rotation || 0);
+                    ctx.drawImage(
+                        item.image,
+                        -item.image.width / 2, // Teken gecentreerd op het rotatiepunt
+                        -item.image.height / 2
+                    );
+                } else if (item.canTopple) {
+                    ctx.rotate(item.rotation || 0);
+                    ctx.drawImage(
+                        item.image,
+                        -item.image.width / 2, // Horizontaal gecentreerd
+                        -item.image.height     // Verticaal: ankerpunt onderaan
+                    );
+                } else {
+                    ctx.drawImage(
+                        item.image,
+                        -item.image.width / 2,
+                        -item.image.height / 2
+                    );
+                }
+                ctx.restore();
             }
         });
     });
 
-    // NIEUW: Voeg het versleepte item toe aan de renderlijst voor correcte diepte
-    if (isItemDragging && draggedItem) {
-        const sortX = draggedItem.x;
-        const sortY = draggedItem.y;
-
-        renderList.push({
-            type: 'draggedItemPreview',
-            x: sortX,
-            y: sortY,
-            draw: () => {
-                const { sx, sy } = toScreen(draggedItem.x, draggedItem.y);
-                ctx.globalAlpha = 0.7; // Maak de preview half-transparant
-                ctx.drawImage(
-                    draggedItem.image,
-                    sx - draggedItem.image.width / 2, // Horizontaal centreren
-                    sy - draggedItem.image.height / 2 // Verticaal centreren
-                );
-                ctx.globalAlpha = 1.0; // Reset alpha
-            }
-        });
-    }
-
     // Voeg de speler toe aan de renderlijst
     renderList.push({
         type: 'player',
-        x: playerTileX, // Gebruik de tegelcoördinaat voor correcte sortering
-        y: playerTileY, // Gebruik de tegelcoördinaat voor correcte sortering
+        sortKey: playerTileX + playerTileY,
         draw: drawBall
     });
 
     // Voeg de bouw-preview toe aan de renderlijst voor correcte diepte
     const objectToPreview = (selectedBuildObject?.placement === 'floor' && selectedBuildObject) || movingObject || draggedObject;
     if (objectToPreview && hoverCell) {
-        const playerOnTile = Math.floor(ball.x) === hoverCell.x && Math.floor(ball.y) === hoverCell.y; // Definieer playerOnTile hier
-        const isOccupied = isBlocked(hoverCell.x, hoverCell.y);
-        const isItemTileOccupied = isItemOccupied(hoverCell.x, hoverCell.y);
-        const isValidPlacement = !isOccupied && !playerOnTile && !isItemTileOccupied;
+        // Check geldigheid (rekening houdend met width/depth)
+        const isFlipped = (objectToPreview === selectedBuildObject) ? isBuildObjectFlipped : (objectToPreview.flipped || false);
+        const w = isFlipped ? (objectToPreview.depth || 1) : (objectToPreview.width || 1);
+        const d = isFlipped ? (objectToPreview.width || 1) : (objectToPreview.depth || 1);
+        let isValidPlacement = true;
+        for(let dx = 0; dx < w; dx++) {
+            for(let dy = 0; dy < d; dy++) {
+                const tx = hoverCell.x + dx;
+                const ty = hoverCell.y + dy;
+                if (tx >= mapW || ty >= mapH || isBlocked(tx, ty) || isItemOccupied(tx, ty) || (Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)) {
+                    isValidPlacement = false;
+                }
+            }
+        }
 
         if (isValidPlacement) {
             renderList.push({
                 type: 'preview',
-                x: hoverCell.x,
-                y: hoverCell.y,
+                sortKey: (hoverCell.x + (w - 1) / 2) + (hoverCell.y + (d - 1) / 2),
                 draw: () => {
-                    const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
+                    const centerX = hoverCell.x + (w - 1) / 2;
+                    const centerY = hoverCell.y + (d - 1) / 2;
+                    const { sx, sy } = toScreen(centerX, centerY);
                     const isTall = objectToPreview.height === 2;
-                    const img = isTall ? objectImg96 : objectImg;
-                    const imgHeight = isTall ? 96 : 64;
-                    let finalImg = img;
+                    const isWide = objectToPreview.width === 2;
+                    let finalImg;
 
-                    // Gebruik de juiste afbeelding voor de preview
-                    if (objectToPreview.moveable) {
-                        finalImg = moveableObjectImg;
+                    if (objectToPreview.name === "Pong") {
+                        finalImg = pongImg;
+                    } else if (objectToPreview.name === "Winkel") {
+                        finalImg = winkelImg;
+                    } else if (objectToPreview.name === "Container") {
+                        finalImg = containerImg;
+                    } else if (objectToPreview.moveable) {
+                        finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
+                    } else {
+                        if (isWide) {
+                            finalImg = objectImg96B;
+                        } else if (isTall) {
+                            finalImg = objectImg96;
+                        } else {
+                            finalImg = objectImg;
+                        }
                     }
 
+                    const imgWidth = finalImg.width || 64;
+                    const imgHeight = finalImg.height || (isTall ? 96 : 64);
+                    
+                    const totalDim = (objectToPreview.width || 1) + (objectToPreview.depth || 1);
+                    const verticalOffset = totalDim * 8 + 16;
+
                     ctx.globalAlpha = 0.7; // Maak de preview half-transparant
-                    if (isBuildObjectFlipped) {
+                    if (isFlipped) {
                         ctx.save();
                         ctx.scale(-1, 1);
                     }
-                    ctx.drawImage(finalImg, isBuildObjectFlipped ? -sx - 32 : sx - 32, sy - imgHeight + tileH, 64, imgHeight);
+                    ctx.drawImage(finalImg, isFlipped ? -sx - imgWidth/2 : sx - imgWidth/2, sy - imgHeight + verticalOffset, imgWidth, imgHeight);
                     
-                    if (isBuildObjectFlipped) {
+                    if (isFlipped) {
                         ctx.restore();
                     }
 
@@ -2770,7 +4295,7 @@ function loop(time) {
     }
     
     // Sorteer op x+y voor isometrische diepte
-    renderList.sort((a,b) => (a.x + a.y) - (b.x + b.y));
+    renderList.sort((a,b) => a.sortKey - b.sortKey);
 
     // Alles tekenen
     for (let item of renderList) {
@@ -2778,6 +4303,7 @@ function loop(time) {
     }
     // --- Einde renderlijst ---
 
+    drawInteractionPrompts(); // Teken interactie prompts bovenop de wereld
     drawChatBallon();
     updateCamera(delta); // delta meegeven
 
