@@ -23,30 +23,36 @@ canvas {
 button {
   font-family: Arial, sans-serif;
   cursor: pointer;
-  border: none;
-  border-radius: 6px;
-  padding: 5px 12px;
-  color: #fff;
+  border: none; /* Geen rand */
+  background: transparent; /* Geen achtergrond */
+  padding: 0;
 }
 
 /* Zoom knoppen */
-#zoomIn {
+#zoomIn, #zoomOut, #centerCam {
   position: absolute;
   top: 10px;
-  left: 10px;
-  background: #28a745;
+  width: 24px;
+  height: 24px;
+}
+#zoomIn {
+  left: 78px; /* Max/Zoom rechts */
 }
 #zoomOut {
-  position: absolute;
-  top: 10px;
-  left: 60px;
-  background: #dc3545;
+  left: 10px; /* Min links */
 }
 #centerCam {
-  position: absolute;
-  top: 10px;
-  left: 110px;
-  background: #007bff;
+  left: 44px; /* Center midden */
+}
+
+/* Algemene stijl voor alle iconen in knoppen */
+button img {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* ───────────────────────────── */
@@ -74,8 +80,10 @@ button {
   gap: 10px;
   width: 250px; /* Vaste breedte om de chat-input niet te verstoren */
 }
-
-.footer-left { left: 20px; }
+.footer-left {
+  left: 20px;
+  gap: 20px; /* Meer ruimte tussen knoppen */
+}
 .footer-right { right: 20px; justify-content: flex-end; }
 
 #chatInput {
@@ -102,15 +110,10 @@ button {
     gap: 10px;
 }
 
-#openChatLog {
-  background: #444;
-  height: 32px;
-  padding: 0 10px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
+#openChatLog, #buildBtn, #inventoryBtn, #adminBtn {
+  width: 24px;
+  height: 24px;
 }
-
 /* ───────────────────────────── */
 /* Bouwmenu */
 /* ───────────────────────────── */
@@ -139,24 +142,18 @@ button {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px; /* Meer ruimte */
   align-items: center; /* Centreer items voor vierkante knoppen */
 }
 
 .category-btn {
-  width: 100%;
-  height: 40px;
-  background: #333;
-  border: 2px solid #555;
-  border-radius: 4px;
-  font-size: 20px;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.category-btn.selected {
-  border-color: white;
 }
 
 #buildMainContent {
@@ -180,13 +177,14 @@ button {
 #objectSubCategoryMenu {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px; /* Meer ruimte */
   width: 60px;
   height: 100%;
   background: rgba(0, 0, 0, 0.2);
   border-right: 1px solid rgba(255, 255, 255, 0.2);
   padding: 10px;
   box-sizing: border-box;
+  align-items: center; /* Horizontaal centreren */
 }
 
 
@@ -256,25 +254,14 @@ button {
 }
 
 .tool-btn {
-  width: 40px; /* Vaste breedte */
-  height: 40px; /* Vaste hoogte */
-  padding: 0; /* Geen extra padding */
-  background: #333;
-  border: 2px solid #555;
-  color: white;
-  cursor: pointer;
-  border-radius: 4px;
-  font-size: 20px; /* Grotere emoji */
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.tool-btn.selected {
-  background: #007bff;
-  border-color: white;
-}
-
 #buildMenuHeader {
   height: 36px;
   line-height: 36px;
@@ -299,6 +286,7 @@ button {
   box-sizing: border-box;
   justify-items: center; /* Centreer items binnen hun grid cel */
   align-items: start; /* Items bovenaan beginnen in hun cell */
+  align-content: start; /* Zorgt dat rijen bovenaan beginnen en niet verspreiden */
 }
 
 .build-item {
@@ -602,6 +590,16 @@ button {
   flex-direction: column;
 }
 
+#containerTools {
+  padding: 5px 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end; /* Knoppen rechts uitlijnen */
+  align-items: center;
+  background: rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 /* ───── Custom scrollbar (WebKit) voor Chat & Bouwmenu ───── */
 #chatLogContent::-webkit-scrollbar,
 #buildMenuContent::-webkit-scrollbar,
@@ -630,21 +628,62 @@ button {
   scrollbar-color: white transparent;
 }
 
+/* ───── Upload Modal ───── */
+#uploadModal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(17, 17, 17, 0.95);
+  border: 1px solid white;
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 100;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  width: 400px;
+  display: none; /* Wordt 'flex' via JS */
+  flex-direction: column;
+  gap: 15px;
+}
+
+#customObjectName {
+  width: 100%;
+  padding: 8px;
+  background: #333;
+  border: 1px solid #555;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#templateGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 </style>
 </head>
 <body>
 
 <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
 
-<button id="zoomIn">+</button>
-<button id="zoomOut">-</button>
-<button id="centerCam">Center</button>
+<button id="zoomIn" title="Zoom In"><img src="icons/max.png"></button>
+<button id="zoomOut" title="Zoom Out"><img src="icons/min.png"></button>
+<button id="centerCam" title="Center"><img src="icons/center.png"></button>
 
 <div id="footer">
 
   <div class="footer-left">
-    <button id="buildBtn">Bouwen</button>
-    <button id="inventoryBtn">Inventaris</button>
+    <button id="adminBtn" title="Admin"><img src="icons/admin.png"></button>
+    <button id="buildBtn" title="Bouwen"><img src="icons/buildmenu.png"></button>
+    <button id="inventoryBtn" title="Inventaris"><img src="icons/inventory.png"></button>
   </div>
 
   <div class="chat-group">
@@ -653,15 +692,16 @@ button {
   </div>
 
   <div class="footer-right">
-    <button id="openChatLog">Open Chat</button>
+    <button id="openChatLog" title="Chat"><img src="icons/chat.png"></button>
   </div>
 
 </div>
 
 <div id="buildMenu" style="display: none;">
   <div id="buildCategoryMenu">
-    <button class="category-btn selected" data-category="objecten" title="Objecten">📦</button>
-    <button class="category-btn" data-category="kleur" title="Kleur">🎨</button>
+    <button class="category-btn selected" data-category="objecten" title="Objecten"><img src="icons/object_active.png"></button>
+    <button class="category-btn" data-category="kleur" title="Kleur"><img src="icons/color.png"></button>
+    <button class="category-btn" id="adminRoomBtn" data-category="kamers" title="Kamers" style="display: none; font-size: 18px;">🏠</button>
   </div>
 
   <div id="buildMainContent">
@@ -677,8 +717,10 @@ button {
       </div>
       <div style="width: 100%; height: 100%;"> <!-- Wrapper voor tools en content -->
         <div id="buildTools">
-          <button id="moveToolBtn" class="tool-btn" title="Verplaatsen">↔️</button>
-          <button id="deleteToolBtn" class="tool-btn" title="Verwijderen">🗑️</button>
+          <button id="moveToolBtn" class="tool-btn" title="Verplaatsen"><img src="icons/place.png"></button>
+          <button id="deleteToolBtn" class="tool-btn" title="Verwijderen"><img src="icons/trash.png"></button>
+          <button id="adminDeleteToolBtn" class="tool-btn" title="Verwijder Item" style="display:none;"><img src="icons/delete.png"></button>
+          <button id="uploadToolBtn" class="tool-btn" title="Upload Custom Item" style="display:none;"><img src="icons/add.png"></button>
         </div>
         <div id="buildMenuContent">
           <!-- Items worden hier dynamisch toegevoegd -->
@@ -689,8 +731,8 @@ button {
     <!-- Weergave voor Kleur Categorie -->
     <div id="colorCategoryView">
       <div id="colorTools">
-        <button class="tool-btn selected" data-tool="brush" title="Kwast">🖌️</button> 
-        <button class="tool-btn" data-tool="bucket" title="Verfemmer">🪣</button>
+        <button class="tool-btn selected" data-tool="brush" title="Kwast"><img src="icons/paint_active.png"></button> 
+        <button class="tool-btn" data-tool="bucket" title="Verfemmer"><img src="icons/fill.png"></button>
       </div>
       <div id="colorPickerWrapper">
         <div id="color-picker-container"></div>
@@ -699,6 +741,37 @@ button {
           <input type="text" id="hexInput" maxlength="7">
         </div>
       </div>
+    </div>
+
+    <!-- Weergave voor Kamers Categorie -->
+    <div id="roomCategoryView" style="display: none; padding: 20px; color: white; font-family: Arial; flex-direction: column; gap: 15px;">
+        <h3 style="margin: 0 0 5px 0; font-weight: normal;">Nieuwe Kamer Aanmaken</h3>
+        
+        <div>
+            <label for="roomNameInput" style="display: block; margin-bottom: 5px; font-size: 14px;">Kamer Naam:</label>
+            <input type="text" id="roomNameInput" placeholder="Naam van de kamer" style="width: 90%; padding: 8px; background: #333; border: 1px solid #666; color: white; border-radius: 4px; font-size: 14px;">
+        </div>
+
+        <div>
+            <label style="display: block; margin-bottom: 5px; font-size: 14px;">Kamer Grootte:</label>
+            <div id="roomSizeSelector" style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 14px;">
+                <label style="cursor:pointer;"><input type="radio" name="roomSize" value="5"> 5x5</label>
+                <label style="cursor:pointer;"><input type="radio" name="roomSize" value="10" checked> 10x10</label>
+                <label style="cursor:pointer;"><input type="radio" name="roomSize" value="20"> 20x20</label>
+                <label style="cursor:pointer;"><input type="radio" name="roomSize" value="30"> 30x30</label>
+            </div>
+        </div>
+
+        <button id="createRoomBtn" style="padding: 10px 15px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; align-self: flex-start; margin-top: 10px;">Kamer Aanmaken</button>
+
+        <hr style="width: 100%; border: 0; border-top: 1px solid #555; margin: 10px 0;">
+        
+        <h3 style="margin: 0 0 5px 0; font-weight: normal;">Level Data (Export/Import)</h3>
+        <textarea id="levelDataOutput" rows="6" style="width: 90%; background: #333; color: #fff; border: 1px solid #555; font-family: monospace; font-size: 11px;" placeholder="JSON data verschijnt hier..."></textarea>
+        <div style="display: flex; gap: 10px;">
+            <button id="exportLevelBtn" style="padding: 8px 12px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">Export Data</button>
+            <button id="importLevelBtn" style="padding: 8px 12px; background: #FF9800; color: white; border: none; border-radius: 4px; cursor: pointer;">Import Data</button>
+        </div>
     </div>
   </div>
 </div>
@@ -709,6 +782,19 @@ button {
     <span class="close-btn" id="closeChatLogBtn">×</span>
   </div>
   <div id="chatLogContent"></div>
+</div>
+
+<div id="uploadModal">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">Custom Object Uploaden</h3>
+        <span id="closeUploadModalCross" style="cursor:pointer; font-size:24px; line-height:1;">×</span>
+    </div>
+    
+    <input type="text" id="customObjectName" placeholder="Naam van object (optioneel)">
+    
+    <div style="font-size:14px; color:#ccc;">Kies een template voor de functie:</div>
+    <div id="templateGrid"></div>
+        <input type="file" id="customFileUpload" style="display:none;" accept="image/*">
 </div>
 
 <div id="inventory" style="display: none;">
@@ -746,6 +832,7 @@ button {
     <span>Container</span>
     <span class="close-btn" id="closeContainerBtn">×</span>
   </div>
+  <div id="containerTools" style="display: none;"></div>
   <div id="containerContent" style="position: relative; height: calc(100% - 36px); overflow: hidden;"></div>
 </div>
 
@@ -779,10 +866,19 @@ ctx.imageSmoothingEnabled = false; // Zorgt voor scherpe pixel-art (geen wazige 
 const MAX_CHARS = 80;
 const charCounter = document.getElementById("charCounter");
 
-const tileW = 64;
-const tileH = 32;
-const mapW = 25;
-const mapH = 25;
+const urlParams = new URLSearchParams(window.location.search);
+const sizeParam = urlParams.get('size');
+
+let tileW = 64;
+let tileH = 32;
+let mapW = 25;
+let mapH = 25;
+
+if (sizeParam && !isNaN(parseInt(sizeParam)) && [5, 10, 20, 30].includes(parseInt(sizeParam))) {
+    const newSize = parseInt(sizeParam);
+    mapW = newSize;
+    mapH = newSize;
+}
 
 // Snelheid speler FPS Hz
 let lastTime = performance.now();
@@ -882,7 +978,8 @@ let dragImageElement = null; // NIEUW: DOM element voor visuele weergave tijdens
 let draggedObjectOriginalPos = null;
 let camOriginalPos = null; // Voor het resetten van de camera na het slepen van een object
 
-let activeObjectSubCategory = 'blok'; // Start met 'blok' geselecteerd
+let activeObjectSubCategory = 'objects'; // Start met 'objects' geselecteerd
+let activeMenuContext = 'player'; // 'player' or 'admin'
 let activeBuildCategory = 'objecten'; // 'objecten', 'kleur', etc.
 let colorTool = 'brush'; // 'brush', 'bucket'
 
@@ -908,7 +1005,7 @@ const wallItemImg = new Image();
 wallItemImg.src = "wall_template.png";
 
 const pongImg = new Image();
-pongImg.src = "pong.png";
+pongImg.src = "objects/pong.png";
 const pongPromptImg = new Image();
 pongPromptImg.src = "prompts/pong.png";
 const shopPromptImg = new Image();
@@ -919,10 +1016,16 @@ const containerImg = new Image();
 containerImg.src = "container_template.png";
 const containerPromptImg = new Image();
 containerPromptImg.src = "prompts/container.png";
+const trashPromptImg = new Image();
+trashPromptImg.src = "prompts/trash.png";
 const containerImg96 = new Image();
 containerImg96.src = "container_template_96.png";
 const containerImg96B = new Image();
 containerImg96B.src = "container_template_96_B.png";
+const trashImg = new Image();
+trashImg.src = "trash_template.png";
+const trashImg96B = new Image();
+trashImg96B.src = "trash_template_96_B.png";
 
 // Nieuwe afbeelding voor oppakbare items
 const itemImg = new Image();
@@ -1028,7 +1131,8 @@ const objects = [
     // Container om te testen
     { x: 12, y: 5, height: 1, flipped: false, name: "Container" },
     { x: 12, y: 8, height: 2, flipped: false, name: "Grote Container" },
-    { x: 14, y: 8, height: 1, width: 2, depth: 1, flipped: false, name: "Brede Container" }
+    { x: 14, y: 8, height: 1, width: 2, depth: 1, flipped: false, name: "Brede Container" },
+    { x: 8, y: 8, height: 1, flipped: false, name: "Prullenbak" }
 ];
 
 function renderInventoryItems() {
@@ -1090,6 +1194,7 @@ const inventoryBtn = document.getElementById("inventoryBtn");
 
 inventoryBtn.addEventListener("click", () => {
     inventory.style.display = inventory.style.display === 'flex' ? 'none' : 'flex';
+    inventoryBtn.querySelector('img').src = inventory.style.display === 'flex' ? "icons/inventory_active.png" : "icons/inventory.png";
     renderInventoryItems(); // Update de inventaris wanneer deze wordt geopend
 });
 
@@ -1118,35 +1223,125 @@ const buildMenuContent = document.getElementById("buildMenuContent");
 
 
 const buildableObjects = [
-    { name: "Blok", height: 1, image: objectImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Hoge Blok", height: 2, image: objectImg96.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Tafel", height: 1, width: 2, depth: 1, image: objectImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Verplaatsbaar Blok", height: 1, image: moveableObjectImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor', moveable: true },
-    { name: "Verplaatsbare Tafel", height: 1, width: 2, depth: 1, image: moveableObjectImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor', moveable: true },
-    { name: "Pong", height: 1, width: 2, depth: 1, image: pongImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Winkel", height: 2, image: winkelImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Container", height: 1, image: containerImg.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Grote Container", height: 2, image: containerImg96.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    { name: "Brede Container", height: 1, width: 2, depth: 1, image: containerImg96B.src, category: 'objecten', subCategory: 'blok', placement: 'floor' },
-    ...Array(6).fill(null).map((_, i) => ({ name: `Test ${i+1}`, height: 1, image: "", category: 'objecten', subCategory: 'blok', placement: 'floor' })),
-    { name: "Muurdecoratie", image: wallItemImg.src, category: 'objecten', subCategory: 'muur', placement: 'wall' },
-    ...Array(8).fill(null).map((_, i) => ({ name: `Test Muur ${i+1}`, image: "", category: 'objecten', subCategory: 'muur', placement: 'wall' }))
+    // Admin/Template Objects
+    // subCategory: 'objects' (was blok)
+    { name: "Blok", height: 1, image: objectImg.src, category: 'objecten', subCategory: 'objects', placement: 'floor', isTemplate: true },
+    { name: "Hoge Blok", height: 2, image: objectImg96.src, category: 'objecten', subCategory: 'objects', placement: 'floor', isTemplate: true },
+    { name: "Tafel", height: 1, width: 2, depth: 1, image: objectImg96B.src, category: 'objecten', subCategory: 'objects', placement: 'floor', isTemplate: true },
+    { name: "Pong", height: 1, width: 2, depth: 1, image: pongImg.src, category: 'objecten', subCategory: 'objects', placement: 'floor', isTemplate: true },
+    
+    // subCategory: 'moveable'
+    { name: "Verplaatsbaar Blok", height: 1, image: moveableObjectImg.src, category: 'objecten', subCategory: 'moveable', placement: 'floor', moveable: true, isTemplate: true },
+    { name: "Verplaatsbare Tafel", height: 1, width: 2, depth: 1, image: moveableObjectImg96B.src, category: 'objecten', subCategory: 'moveable', placement: 'floor', moveable: true, isTemplate: true },
+    
+    // subCategory: 'shop'
+    { name: "Winkel", height: 2, image: winkelImg.src, category: 'objecten', subCategory: 'shop', placement: 'floor', isTemplate: true },
+    
+    // subCategory: 'containers'
+    { name: "Container", height: 1, image: containerImg.src, category: 'objecten', subCategory: 'containers', placement: 'floor', isTemplate: true },
+    { name: "Grote Container", height: 2, image: containerImg96.src, category: 'objecten', subCategory: 'containers', placement: 'floor', isTemplate: true },
+    { name: "Brede Container", height: 1, width: 2, depth: 1, image: containerImg96B.src, category: 'objecten', subCategory: 'containers', placement: 'floor', isTemplate: true },
+    
+    // subCategory: 'trash'
+    { name: "Prullenbak", height: 1, image: trashImg.src, category: 'objecten', subCategory: 'trash', placement: 'floor', isTemplate: true },
+    { name: "Brede Prullenbak", height: 1, width: 2, depth: 1, image: trashImg96B.src, category: 'objecten', subCategory: 'trash', placement: 'floor', isTemplate: true },
+
+    // subCategory: 'wall' (was muur)
+    { name: "Muurdecoratie", image: wallItemImg.src, category: 'objecten', subCategory: 'wall', placement: 'wall', isTemplate: true },
+
+    // Player Objects
+    { name: "Pong", height: 1, width: 2, depth: 1, image: pongImg.src, category: 'objecten', subCategory: 'objects', placement: 'floor' },
+    { name: "Muurdecoratie", image: wallItemImg.src, category: 'objecten', subCategory: 'wall', placement: 'wall' }
 ];
+
+
+// ─────────────────────────────────────────────
+// 💾 LOCALSTORAGE LOGICA (CUSTOM OBJECTS)
+// ─────────────────────────────────────────────
+const CUSTOM_OBJECTS_KEY = 'habboCloneCustomObjects';
+
+function saveCustomObjects() {
+    // Filter out only the custom objects that have been added at runtime
+    const customObjectsToSave = buildableObjects.filter(o => o.isCustom);
+    
+    // We only need to save the definition, not the live runtimeImage object
+    const serializableObjects = customObjectsToSave.map(o => {
+        const { runtimeImage, ...serializable } = o; // Destructure to remove runtimeImage
+        return serializable;
+    });
+
+    localStorage.setItem(CUSTOM_OBJECTS_KEY, JSON.stringify(serializableObjects));
+}
+
+function loadCustomObjects() {
+    const savedObjectsJSON = localStorage.getItem(CUSTOM_OBJECTS_KEY);
+    if (savedObjectsJSON) {
+        try {
+            const loadedObjects = JSON.parse(savedObjectsJSON);
+            loadedObjects.forEach(obj => {
+                const img = new Image();
+                img.src = obj.image; // The image is a base64 data URL
+                obj.runtimeImage = img;
+                buildableObjects.push(obj);
+            });
+        } catch (e) {
+            console.error("Failed to load custom objects from localStorage:", e);
+            localStorage.removeItem(CUSTOM_OBJECTS_KEY);
+        }
+    }
+}
+loadCustomObjects(); // Laad custom objecten uit localStorage bij het starten
 
 function renderBuildItems() {
     const moveToolBtn = document.getElementById("moveToolBtn");
     const deleteToolBtn = document.getElementById("deleteToolBtn");
+    const adminDeleteToolBtn = document.getElementById("adminDeleteToolBtn");
 
     buildMenuContent.innerHTML = ''; // Maak de lijst leeg
-    const itemsToShow = buildableObjects.filter(item => 
-        item.category === activeBuildCategory && item.subCategory === activeObjectSubCategory
-    );
+    const itemsToShow = buildableObjects.filter(item => {
+        const isTemplate = !!item.isTemplate; // Convert undefined to false
+        // Custom items tonen in zowel Admin als Player menu
+        const contextMatch = item.isCustom ? true : ((activeMenuContext === 'admin') ? isTemplate : !isTemplate);
+        return contextMatch && item.category === activeBuildCategory && item.subCategory === activeObjectSubCategory;
+    });
 
     itemsToShow.forEach(item => {
     const div = document.createElement("div");
     div.className = "build-item";
     div.innerHTML = `<img src="${item.image}" alt="${item.name}">${item.name}`;
     div.onclick = () => {
+        // Als admin delete tool actief is, verwijder item uit menu
+        if (buildTool === 'adminDelete') {
+            // Vraag om bevestiging, vooral voor custom items
+            if (confirm(`Weet je zeker dat je "${item.name}" permanent wilt verwijderen?`)) {
+                const idx = buildableObjects.indexOf(item);
+                if (idx > -1) {
+                    buildableObjects.splice(idx, 1);
+                    
+                    // VERWIJDER OOK ALLE GEPLAATSTE EXEMPLAREN
+                    // Filter objects array (vloer objecten)
+                    for (let i = objects.length - 1; i >= 0; i--) {
+                        if (objects[i].name === item.name) {
+                            objects.splice(i, 1);
+                        }
+                    }
+                    // Filter wallObjects (muur objecten)
+                    for (let i = wallObjects.length - 1; i >= 0; i--) {
+                        if (wallObjects[i].name === item.name) {
+                            wallObjects.splice(i, 1);
+                        }
+                    }
+
+                    // Als het een custom object was, update localStorage
+                    if (item.isCustom) {
+                        saveCustomObjects();
+                    }
+                    renderBuildItems(); // Her-render de lijst
+                }
+            }
+            return;
+        }
+
         // Activeer 'place' tool
         setBuildTool('place');
 
@@ -1158,6 +1353,7 @@ function renderBuildItems() {
             // Deselecteer tools
             moveToolBtn.classList.remove('selected');
             deleteToolBtn.classList.remove('selected');
+            if(adminDeleteToolBtn) adminDeleteToolBtn.querySelector('img').src = "icons/delete.png";
             // Deselecteer andere items
             document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
             // Selecteer dit item
@@ -1175,8 +1371,12 @@ function renderObjectSubCategories() {
     subCategoryMenu.innerHTML = ''; // Leegmaken
 
     // Verzamel unieke subcategorieën
-    const subCategories = [...new Set(buildableObjects
-        .filter(item => item.category === 'objecten')
+    const subCategories = [...new Set(buildableObjects.filter(item => {
+            const isTemplate = !!item.isTemplate;
+            // Laat subcategorieën zien als er items in zitten, ook custom items in player mode
+            const contextMatch = item.isCustom ? true : ((activeMenuContext === 'admin') ? isTemplate : !isTemplate);
+            return contextMatch && item.category === 'objecten';
+        })
         .map(item => item.subCategory))];
 
     // Maak voor elke subcategorie een knop
@@ -1189,10 +1389,15 @@ function renderObjectSubCategories() {
         btn.dataset.subCategory = subCat;
         btn.title = subCat.charAt(0).toUpperCase() + subCat.slice(1); // bv. 'Blok'
         // Kies een icoon op basis van de subcategorie
-        if (subCat === 'blok') {
-            btn.textContent = '🧱';
-        } else if (subCat === 'muur') {
-            btn.textContent = '🖼️';
+        const isActive = subCat === activeObjectSubCategory;
+        if (subCat === 'objects') {
+            btn.innerHTML = `<img src="icons/object${isActive ? '_active' : ''}.png">`;
+        } else if (subCat === 'wall') {
+            btn.innerHTML = `<img src="icons/wall${isActive ? '_active' : ''}.png">`;
+        } else {
+            // Fallback icoon voor nieuwe categorieën (moveable, shop, etc.)
+            // Je kunt hier specifieke iconen toevoegen zoals 'icons/shop.png' als je die hebt.
+            btn.innerHTML = `<img src="icons/object${isActive ? '_active' : ''}.png">`;
         }
         
         
@@ -1208,7 +1413,7 @@ function renderObjectSubCategories() {
 function setBuildTool(tool) {
     buildTool = tool;
     // Deselecteer meubel als we een andere tool kiezen
-    if (tool === 'move' || tool === 'delete') {
+    if (tool === 'move' || tool === 'delete' || tool === 'adminDelete') {
         selectedBuildObject = null;
         document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
     }
@@ -1221,48 +1426,74 @@ function setBuildTool(tool) {
 }
 
 moveToolBtn.addEventListener('click', () => {
+    const img = moveToolBtn.querySelector('img');
     if (buildTool === 'move') {
         setBuildTool('place'); // Terug naar neutraal
-        moveToolBtn.classList.remove('selected');
+        img.src = "icons/place.png";
     } else {
         setBuildTool('move');
         closeSecondaryWindows(); // Sluit andere vensters om conflicten te voorkomen
-        moveToolBtn.classList.add('selected');
-        deleteToolBtn.classList.remove('selected');
+        img.src = "icons/place_active.png";
+        deleteToolBtn.querySelector('img').src = "icons/trash.png"; // Reset delete
+        document.getElementById('adminDeleteToolBtn').querySelector('img').src = "icons/delete.png";
     }
 });
 
 deleteToolBtn.addEventListener('click', () => {
+    const img = deleteToolBtn.querySelector('img');
     setBuildTool(buildTool === 'delete' ? 'place' : 'delete');
-    deleteToolBtn.classList.toggle('selected');
-    moveToolBtn.classList.remove('selected');
+    img.src = buildTool === 'delete' ? "icons/trash_active.png" : "icons/trash.png";
+    moveToolBtn.querySelector('img').src = "icons/place.png"; // Reset move
+    document.getElementById('adminDeleteToolBtn').querySelector('img').src = "icons/delete.png";
 });
+
+const adminDeleteToolBtn = document.getElementById('adminDeleteToolBtn');
+if (adminDeleteToolBtn) {
+    adminDeleteToolBtn.addEventListener('click', () => {
+        const img = adminDeleteToolBtn.querySelector('img');
+        setBuildTool(buildTool === 'adminDelete' ? 'place' : 'adminDelete');
+        img.src = buildTool === 'adminDelete' ? "icons/delete_active.png" : "icons/delete.png";
+        moveToolBtn.querySelector('img').src = "icons/place.png";
+        deleteToolBtn.querySelector('img').src = "icons/trash.png";
+    });
+}
+
 // --- Kruisjes om menu's te sluiten ---
 document.getElementById('closeBuildMenuBtn').addEventListener('click', () => {
-    // Simuleer een klik op de hoofdknop om de sluit-logica te hergebruiken
-    if (isBuildMode) {
-        buildBtn.click();
-    }
+    closeBuildAdminMenu();
 });
 
 document.getElementById('closeChatLogBtn').addEventListener('click', () => {
     chatLog.style.display = 'none';
+    document.querySelector('#openChatLog img').src = "icons/chat.png";
 });
 
 document.getElementById('closeInventoryBtn').addEventListener('click', () => {
     inventory.style.display = 'none';
+    document.querySelector('#inventoryBtn img').src = "icons/inventory.png";
 });
 
 buildCategoryMenu.addEventListener('click', (e) => {
-    if (e.target.classList.contains('category-btn')) {
+    const btn = e.target.closest('.category-btn');
+    if (btn) {
         // Verwijder 'selected' van alle categorieknoppen
-        buildCategoryMenu.querySelectorAll('.category-btn').forEach(btn => {
-            btn.classList.remove('selected');
+        buildCategoryMenu.querySelectorAll('.category-btn').forEach(b => {
+            b.classList.remove('selected');
+            // Reset iconen naar inactive
+            const img = b.querySelector('img');
+            if (img) {
+                if (b.dataset.category === 'objecten') img.src = "icons/object.png";
+                if (b.dataset.category === 'kleur') img.src = "icons/color.png";
+            }
         });
         // Deselecteer de losse tools
         setBuildTool('place');
-        moveToolBtn.classList.remove('selected');
-        deleteToolBtn.classList.remove('selected');
+        
+        // Reset tool icons
+        document.querySelector('#moveToolBtn img').src = "icons/place.png";
+        document.querySelector('#deleteToolBtn img').src = "icons/trash.png";
+        document.querySelector('#adminDeleteToolBtn img').src = "icons/delete.png";
+
 
         // Annuleer een eventuele 'move' actie
         if (movingObject) {
@@ -1278,11 +1509,20 @@ buildCategoryMenu.addEventListener('click', (e) => {
         }
 
         // Voeg 'selected' toe aan de geklikte knop
-        e.target.classList.add('selected');
-        activeBuildCategory = e.target.dataset.category;
+        btn.classList.add('selected');
+        activeBuildCategory = btn.dataset.category;
+        
+        // Set active icon
+        const activeImg = btn.querySelector('img');
+        if (activeImg) {
+            if (activeBuildCategory === 'objecten') activeImg.src = "icons/object_active.png";
+            if (activeBuildCategory === 'kleur') activeImg.src = "icons/color_active.png";
+        }
+
         // Wissel de zichtbare content
         document.getElementById('objectCategoryView').style.display = activeBuildCategory === 'objecten' ? 'flex' : 'none';
         document.getElementById('colorCategoryView').style.display = activeBuildCategory === 'kleur' ? 'flex' : 'none';        
+        document.getElementById('roomCategoryView').style.display = activeBuildCategory === 'kamers' ? 'block' : 'none';
         
         if (activeBuildCategory === 'objecten') {
             renderObjectSubCategories(); // Render de subcategorie-knoppen
@@ -1305,8 +1545,16 @@ colorToolsContainer.addEventListener('click', (e) => {
     // Update de visuele selectie
     colorToolsContainer.querySelectorAll('.tool-btn').forEach(btn => {
         btn.classList.remove('selected');
+        // Reset icons
+        const img = btn.querySelector('img');
+        if (btn.dataset.tool === 'brush') img.src = "icons/paint.png";
+        if (btn.dataset.tool === 'bucket') img.src = "icons/fill.png";
     });
     clickedButton.classList.add('selected');
+    // Set active icon
+    const activeImg = clickedButton.querySelector('img');
+    if (colorTool === 'brush') activeImg.src = "icons/paint_active.png";
+    if (colorTool === 'bucket') activeImg.src = "icons/fill_active.png";
 });
 
 // --- iro.js Color Picker Initialisatie ---
@@ -1349,27 +1597,269 @@ document.getElementById('hexInput').addEventListener('change', (e) => {
     }
 });
 
-buildBtn.addEventListener("click", () => {
-    isBuildMode = !isBuildMode;
-    if (isBuildMode) {
-        // Zorg dat de juiste view zichtbaar is bij openen
-        document.querySelector('.category-btn.selected').click();
-        buildMenu.style.display = "flex";
-        renderObjectSubCategories(); // Render subcats bij openen
-        renderBuildItems(); // Render items bij openen
-    } else {
-        buildMenu.style.display = "none";
-        // Deselecteer alles bij sluiten
-        selectedBuildObject = null;
-        document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
-        isBuildObjectFlipped = false;
-        setBuildTool('place');
-        moveToolBtn.classList.remove('selected');
-        deleteToolBtn.classList.remove('selected');
-        // Reset naar objecten categorie voor de volgende keer
-        document.querySelector('.category-btn[data-category="objecten"]').click();
+const adminBtn = document.getElementById("adminBtn");
+const buildMenuHeaderSpan = buildMenu.querySelector('#buildMenuHeader span');
+
+function closeBuildAdminMenu() {
+    isBuildMode = false;
+    buildMenu.style.display = "none";
+
+    // Reset icons
+    buildBtn.querySelector('img').src = "icons/buildmenu.png";
+    adminBtn.querySelector('img').src = "icons/admin.png";
+
+    // Cleanup logic
+    selectedBuildObject = null;
+    document.querySelectorAll('.build-item.selected').forEach(el => el.classList.remove('selected'));
+    isBuildObjectFlipped = false;
+    setBuildTool('place');
+    document.querySelector('#moveToolBtn img').src = "icons/place.png";
+    document.querySelector('#deleteToolBtn img').src = "icons/trash.png";
+    document.querySelector('#adminDeleteToolBtn img').src = "icons/delete.png";
+    
+    // Reset to objecten categorie for the next time
+    const objBtn = document.querySelector('.category-btn[data-category="objecten"]'); // Default naar objects/blok
+    if(objBtn) objBtn.click();
+}
+
+function openBuildAdminMenu(context) {
+    // If we click the same button again while the menu is open, close it.
+    if (isBuildMode && activeMenuContext === context) {
+        closeBuildAdminMenu();
+        return;
+    }
+
+    isBuildMode = true;
+    activeMenuContext = context;
+    buildMenu.style.display = "flex";
+
+    // Update header text
+    buildMenuHeaderSpan.textContent = (context === 'admin') ? "Admin" : "Bouwmodus";
+
+    // Update button icons
+    buildBtn.querySelector('img').src = (context === 'player') ? "icons/buildmenu_active.png" : "icons/buildmenu.png";
+    adminBtn.querySelector('img').src = (context === 'admin') ? "icons/admin_active.png" : "icons/admin.png";
+
+    // Toon/verberg de kamers knop
+    const roomBtn = document.getElementById('adminRoomBtn');
+    if (roomBtn) {
+        roomBtn.style.display = (context === 'admin') ? 'flex' : 'none';
+    }
+
+    const adminDelBtn = document.getElementById('adminDeleteToolBtn');
+    if (adminDelBtn) {
+        adminDelBtn.style.display = (context === 'admin') ? 'flex' : 'none';
+    }
+
+    const uploadBtn = document.getElementById('uploadToolBtn');
+    if (uploadBtn) {
+        uploadBtn.style.display = (context === 'admin') ? 'flex' : 'none';
+    }
+
+    // Render content for the new context
+    // Reset subcategory to 'objects' (was blok) when opening menu to ensure valid state
+    activeObjectSubCategory = 'objects';
+    
+    const activeCatBtn = document.querySelector('.category-btn[data-category="objecten"]');
+    if(activeCatBtn) {
+        activeCatBtn.click(); // Trigger click to refresh view
+    }
+}
+
+buildBtn.addEventListener("click", () => openBuildAdminMenu('player'));
+adminBtn.addEventListener("click", () => openBuildAdminMenu('admin'));
+
+document.getElementById('createRoomBtn').addEventListener('click', () => {
+    const roomNameInput = document.getElementById('roomNameInput');
+    const roomName = roomNameInput.value.trim();
+    const selectedSizeRadio = document.querySelector('input[name="roomSize"]:checked');
+
+    if (!roomName) {
+        showNotification("Voer een naam in voor de kamer.");
+        return;
+    }
+    if (!selectedSizeRadio) {
+        showNotification("Selecteer een kamergrootte.");
+        return;
+    }
+
+    const selectedSize = selectedSizeRadio.value;
+    // Maak een URL-vriendelijke naam
+    const sanitizedName = roomName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
+    if (!sanitizedName) {
+        showNotification("De ingevoerde naam is ongeldig.");
+        return;
+    }
+
+    // Omdat we geen bestanden kunnen schrijven (browser security), gebruiken we URL parameters.
+    // Dit herlaadt de pagina met de nieuwe instellingen (naam en grootte).
+    window.location.search = `?room=${sanitizedName}&size=${selectedSize}`;
+});
+
+document.getElementById('exportLevelBtn').addEventListener('click', () => {
+    const levelData = {
+        mapW,
+        mapH,
+        objects,
+        wallObjects,
+        tileColors,
+        wallColors
+    };
+    const json = JSON.stringify(levelData, null, 2);
+    document.getElementById('levelDataOutput').value = json;
+});
+
+document.getElementById('importLevelBtn').addEventListener('click', () => {
+    try {
+        const json = document.getElementById('levelDataOutput').value;
+        if(!json) return;
+        const data = JSON.parse(json);
+        
+        if(data.mapW) mapW = data.mapW;
+        if(data.mapH) mapH = data.mapH;
+        
+        if(data.objects) {
+            objects.length = 0;
+            data.objects.forEach(o => objects.push(o));
+        }
+        if(data.wallObjects) {
+            wallObjects.length = 0;
+            data.wallObjects.forEach(o => wallObjects.push(o));
+        }
+        if(data.tileColors) {
+            // Clear existing and copy new
+            for (const key in tileColors) delete tileColors[key];
+            Object.assign(tileColors, data.tileColors);
+        }
+        if(data.wallColors) {
+            for (const key in wallColors) delete wallColors[key];
+            Object.assign(wallColors, data.wallColors);
+        }
+        
+        showNotification("Level ingeladen!");
+        
+        // Sluit menu om resultaat te zien
+        // closeBuildAdminMenu(); 
+    } catch(e) {
+        alert("Fout bij importeren: " + e.message);
     }
 });
+
+// ─────────────────────────────────────────────
+// 📤 UPLOAD CUSTOM ITEM LOGICA
+// ─────────────────────────────────────────────
+const uploadToolBtn = document.getElementById('uploadToolBtn');
+const uploadModal = document.getElementById('uploadModal');
+const templateGrid = document.getElementById('templateGrid');
+const customFileUpload = document.getElementById('customFileUpload');
+const closeUploadModal = document.getElementById('closeUploadModal');
+const closeUploadModalCross = document.getElementById('closeUploadModalCross');
+let selectedTemplate = null;
+
+if (uploadToolBtn) {
+    uploadToolBtn.addEventListener('click', () => {
+        uploadModal.style.display = 'flex';
+        uploadToolBtn.querySelector('img').src = "icons/add_active.png";
+        templateGrid.innerHTML = '';
+        
+        // Vind unieke templates in de huidige categorie/subcategorie
+        const currentTemplates = buildableObjects.filter(o => 
+            o.category === activeBuildCategory && 
+            o.subCategory === activeObjectSubCategory &&
+            o.isTemplate
+        );
+
+        // Dedupliceer op basis van eigenschappen (niet plaatje)
+        const uniqueTemplates = [];
+        const seenProps = new Set();
+
+        currentTemplates.forEach(t => {
+            // Maak een unieke key van de fysieke eigenschappen
+            const props = `${t.width||1}-${t.height||1}-${t.depth||1}-${t.placement}-${t.moveable||false}-${t.subCategory}`;
+            if (!seenProps.has(props)) {
+                seenProps.add(props);
+                uniqueTemplates.push(t);
+            }
+        });
+
+        uniqueTemplates.forEach(t => {
+            const div = document.createElement('div');
+            div.style.border = '1px solid #555';
+            div.style.padding = '5px';
+            div.style.cursor = 'pointer';
+            div.style.textAlign = 'center';
+            div.style.borderRadius = '4px';
+            div.style.background = 'rgba(255,255,255,0.1)';
+            div.innerHTML = `<img src="${t.image}" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated;"><br><span style="font-size:10px;">${t.name}</span>`;
+            div.onclick = () => {
+                selectedTemplate = t;
+                customFileUpload.click();
+            };
+            templateGrid.appendChild(div);
+        });
+    });
+}
+
+if (closeUploadModal) {
+    closeUploadModal.addEventListener('click', () => {
+        uploadModal.style.display = 'none';
+        if(uploadToolBtn) uploadToolBtn.querySelector('img').src = "icons/add.png";
+    });
+}
+
+if (closeUploadModalCross) {
+    closeUploadModalCross.addEventListener('click', () => {
+        uploadModal.style.display = 'none';
+        if(uploadToolBtn) uploadToolBtn.querySelector('img').src = "icons/add.png";
+    });
+}
+
+if (customFileUpload) {
+    customFileUpload.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Lees de naam direct uit, voordat deze gereset wordt aan het einde van de functie
+        const nameInput = document.getElementById('customObjectName');
+        const enteredName = nameInput.value.trim();
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const imgData = event.target.result;
+            const img = new Image();
+            img.src = imgData;
+            
+            const customName = enteredName || ("Custom " + selectedTemplate.name);
+
+            // Maak nieuw object definitie
+            const newObj = {
+                ...selectedTemplate,
+                name: customName,
+                image: imgData, // Dit is de base64 data URL
+                runtimeImage: img, // Voor canvas rendering
+                isTemplate: true, // Zodat hij in admin menu verschijnt
+                isCustom: true // Markeer als custom object voor opslag
+            };
+            
+            // Voeg toe aan lijst
+            buildableObjects.push(newObj);
+            // Sla de bijgewerkte lijst met custom objecten op
+            saveCustomObjects();
+            
+            // Ververs menu
+            renderBuildItems();
+            
+            // Sluit modal
+            uploadModal.style.display = 'none';
+            if(uploadToolBtn) uploadToolBtn.querySelector('img').src = "icons/add.png";
+            showNotification("Custom object toegevoegd!");
+        };
+        reader.readAsDataURL(file);
+        customFileUpload.value = ''; // Reset
+        document.getElementById('customObjectName').value = ''; // Reset naam
+    });
+}
 
 // ─────────────────────────────────────────────
 // 🏓 PONG MINIGAME LOGICA
@@ -1553,10 +2043,13 @@ const chatLog = document.getElementById("chatLog");
 const openChatLogBtn = document.getElementById("openChatLog");
 
 openChatLogBtn.addEventListener("click", () => {
+    const img = openChatLogBtn.querySelector('img');
     if (chatLog.style.display === "block") {
         chatLog.style.display = "none";
+        img.src = "icons/chat.png";
     } else {
         chatLog.style.display = "block";
+        img.src = "icons/chat_active.png";
         chatLog.scrollTop = chatLog.scrollHeight; // naar beneden scrollen
     }
 });
@@ -1887,7 +2380,7 @@ function drawTiles() {
     }
 
     // Verwijder-modus hover
-    if (buildTool === 'delete' && hoverCell) {
+    if ((buildTool === 'delete' || buildTool === 'adminDelete') && hoverCell) {
         // Zoek object dat deze tegel bezet (rekening houdend met width/depth)
         const objectOnTile = objects.find(o => {
             const w = o.flipped ? (o.depth || 1) : (o.width || 1);
@@ -2263,6 +2756,9 @@ window.addEventListener("keydown", (e) => {
     // ❌ Geen bouwmodus: focus de chat, maar sluit speciale toetsen uit
     if (
         active !== chatInput &&
+        active.tagName !== "INPUT" &&
+        active.id !== "customObjectName" &&
+        active.tagName !== "TEXTAREA" &&
         !["Shift", "Control", "Alt", "Meta", "Enter"].includes(e.key)
     ) {
         chatInput.focus();
@@ -2466,7 +2962,7 @@ function drawInteractionPrompts() {
     const playerY = Math.floor(ball.y);
 
     objects.forEach(obj => {
-        if (obj.name === "Pong" || obj.name === "Winkel" || obj.name.includes("Container")) {
+        if (obj.name === "Pong" || obj.name === "Winkel" || obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
             const isFlipped = obj.flipped;
             const w = isFlipped ? (obj.depth || 1) : (obj.width || 1); // Pong=2x1, Winkel=1x1 (maar hoog)
             const d = isFlipped ? (obj.width || 1) : (obj.depth || 1);
@@ -2480,8 +2976,8 @@ function drawInteractionPrompts() {
                 } else {
                     spots.push({x: obj.x + 1, y: obj.y}); // Rechts-onder (x+1)
                 }
-            } else if (obj.name.includes("Container")) {
-                if (obj.name === "Brede Container") {
+            } else if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
+                if (obj.name === "Brede Container" || obj.name === "Brede Prullenbak") {
                     // Speciale logica voor de brede container: interactie aan de 'voorkant' (onder/rechts)
                     if (isFlipped) {
                         // Verticale oriëntatie -> Interactie rechts (x+w)
@@ -2530,7 +3026,9 @@ function drawInteractionPrompts() {
                 let promptImg = pongPromptImg;
                 if (obj.name === "Winkel") {
                     promptImg = shopPromptImg;
-                } else if (obj.name.includes("Container")) {
+                } else if (obj.name.includes("Prullenbak")) {
+                    promptImg = trashPromptImg;
+                } else if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
                     promptImg = containerPromptImg;
                 }
                 const imgW = promptImg.width || 32;
@@ -2538,7 +3036,7 @@ function drawInteractionPrompts() {
                 
                 const time = Date.now();
                 
-                if (obj.name.includes("Container")) {
+                if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
                     // Animatie: zacht sprongetje (bounce)
                     const bounce = Math.abs(Math.sin(time / 300)) * 8; // Springt 8px omhoog
                     ctx.translate(drawX, drawY - bounce);
@@ -2785,8 +3283,8 @@ canvas.addEventListener("mousedown", e => {
                     showNotification("Om te kunnen tafeltennissen moet je een batje in je inventaris hebben!");
                 }
             } else if (activeInteractionButton.obj.name === "Winkel") {
-                openShopWindow();
-            } else if (activeInteractionButton.obj.name.includes("Container")) {
+                openShopWindow(activeInteractionButton.obj);
+            } else if (activeInteractionButton.obj.name.includes("Container") || activeInteractionButton.obj.name.includes("Prullenbak")) {
                 openContainerWindow(activeInteractionButton.obj);
             }
             return;
@@ -2864,6 +3362,7 @@ canvas.addEventListener("mousedown", e => {
 
                 // Open de inventaris zodat de gebruiker de optie heeft om het item daarheen te slepen
                 inventory.style.display = 'flex';
+                document.querySelector('#inventoryBtn img').src = "icons/inventory_active.png";
                 renderInventoryItems();
                 console.log("Item vastgepakt!", draggedItem);
                 e.preventDefault(); // Voorkom "ghost image" van de canvas (fotokopie effect)
@@ -3013,9 +3512,9 @@ window.addEventListener("mouseup", e => {
             if (windowStatesBeforeDrag.chat) document.getElementById('chatLog').style.display = windowStatesBeforeDrag.chat;
             // We laten de inventory open als die al open was, of als we er iets in hebben gesleept.
             if (windowStatesBeforeDrag.inventory === 'flex' || droppedInInventory) {
-                 if(inventory) inventory.style.display = 'flex';
+                 if(inventory) { inventory.style.display = 'flex'; document.querySelector('#inventoryBtn img').src = "icons/inventory_active.png"; }
             } else {
-                 if(inventory) inventory.style.display = 'none';
+                 if(inventory) { inventory.style.display = 'none'; document.querySelector('#inventoryBtn img').src = "icons/inventory.png"; }
             }
             if (windowStatesBeforeDrag.build === 'flex') {
                 if (!isBuildMode) buildBtn.click();
@@ -3101,7 +3600,7 @@ window.addEventListener("mouseup", e => {
                         }
                     }
                     break;
-                case 'delete':
+                case 'delete': case 'adminDelete':
                     const objectToDeleteIndex = objects.findIndex(o => {
                         const w = o.flipped ? (o.depth || 1) : (o.width || 1);
                         const d = o.flipped ? (o.width || 1) : (o.depth || 1);
@@ -3303,7 +3802,10 @@ const shopCatalog = [
     { name: "Batje Zwart", image: batjeZwartImg, price: 15.00, mass: 0.4, canTopple: true }
 ];
 
-function openShopWindow() {
+let currentOpenShop = null;
+
+function openShopWindow(shopObj) {
+    currentOpenShop = shopObj;
     const shopWindow = document.getElementById('shopWindow');
     shopWindow.style.display = 'flex';
     renderShopItems();
@@ -3311,11 +3813,13 @@ function openShopWindow() {
     
     // Open ook de inventory voor gemak
     inventory.style.display = 'flex';
+    document.querySelector('#inventoryBtn img').src = "icons/inventory_active.png";
     renderInventoryItems();
 }
 
 document.getElementById('closeShopBtn').addEventListener('click', () => {
     document.getElementById('shopWindow').style.display = 'none';
+    currentOpenShop = null;
 });
 
 function renderShopItems() {
@@ -3446,6 +3950,22 @@ document.getElementById("centerCam").addEventListener("click", ()=>{
     camSmooth = true;
 });
 
+const setupStatefulButton = (btn, normalIcon, activeIcon) => {
+    if (!btn) return;
+    const img = btn.querySelector('img');
+    if (!img) return;
+
+    btn.addEventListener('mousedown', () => { img.src = activeIcon; });
+    
+    const resetIcon = () => { img.src = normalIcon; };
+    btn.addEventListener('mouseup', resetIcon);
+    btn.addEventListener('mouseleave', resetIcon);
+};
+
+setupStatefulButton(document.getElementById("zoomIn"), "icons/max.png", "icons/max_active.png");
+setupStatefulButton(document.getElementById("zoomOut"), "icons/min.png", "icons/min_active.png");
+setupStatefulButton(document.getElementById("centerCam"), "icons/center.png", "icons/center_active.png");
+
 function updateCamera(delta){
     if(!camSmooth || delta === 0) return;
     let dx = camTargetX - camX; 
@@ -3494,12 +4014,56 @@ function openContainerWindow(obj) {
     }
     
     const containerWindow = document.getElementById('containerWindow');
+    const containerTools = document.getElementById('containerTools');
+    const containerContent = document.getElementById('containerContent');
     
     // Update de titel van het venster
     containerWindow.querySelector('#containerHeader span').textContent = obj.name;
     
+    // Reset tools en content hoogte
+    containerTools.innerHTML = '';
+    containerTools.style.display = 'none';
+    containerContent.style.height = 'calc(100% - 36px)';
+
+    // Voeg prullenbak-knop toe indien nodig
+    if (obj.name.includes("Prullenbak")) {
+        containerTools.style.display = 'flex';
+        containerContent.style.height = 'calc(100% - 36px - 51px)'; // 36px header + 51px tools
+
+        const trashBtn = document.createElement('button');
+        trashBtn.className = 'tool-btn';
+        trashBtn.style.background = 'transparent';
+        trashBtn.style.border = 'none';
+        trashBtn.title = 'Leegmaken';
+
+        const trashIcon = document.createElement('img');
+        trashIcon.src = 'icons/trash.png';
+        trashIcon.style.width = '24px';
+        trashIcon.style.height = '24px';
+
+        trashBtn.appendChild(trashIcon);
+
+        trashBtn.onclick = () => {
+            // Voer alleen actie uit als er items zijn om te verwijderen
+            if (openContainer && openContainer.items.length > 0) {
+                // Verander icoon naar 'actief'
+                trashIcon.src = 'icons/trash_active.png';
+
+                // Leeg de items array
+                openContainer.items = []; 
+                
+                // Wacht even, dan her-render en zet icoon terug
+                setTimeout(() => {
+                    renderContainerItems(); // Her-render de (nu lege) container
+                    trashIcon.src = 'icons/trash.png';
+                }, 200);
+            }
+        };
+        containerTools.appendChild(trashBtn);
+    }
+
     // Check welk type container het is voor de grootte van het venster
-    if (obj.name === "Grote Container" || obj.name === "Brede Container") {
+    if (obj.name === "Grote Container" || obj.name === "Brede Container" || obj.name === "Brede Prullenbak") {
         containerWindow.style.width = "400px"; // Breder voor 3 kolommen
         obj.columns = 3;
     } else {
@@ -3513,6 +4077,7 @@ function openContainerWindow(obj) {
     // Open ook de inventory voor gemak
     inventory.style.left = "150px"; // Reset positie voor netheid
     inventory.style.display = 'flex';
+    document.querySelector('#inventoryBtn img').src = "icons/inventory_active.png";
     renderInventoryItems();
 }
 
@@ -3716,19 +4281,14 @@ function updateBall(delta) {
     const maxDistance = 1.5; // Maximale afstand in tegels voordat venster sluit
 
     // Check Winkel
-    if (shopWindow.style.display === 'flex') {
-        // Zoek de dichtstbijzijnde winkel
-        // (In een echte game zou je bijhouden WELKE winkel open is, maar dit werkt voor nu)
-        const nearestShop = objects.find(o => o.name === "Winkel" && Math.abs(o.x - ball.x) < 5 && Math.abs(o.y - ball.y) < 5);
-        if (nearestShop) {
-            const dx = nearestShop.x - ball.x;
-            const dy = nearestShop.y - ball.y;
-            // Gebruik manhattan distance of euclidische afstand naar de rand van het object
-            // Simpele check: afstand tot het midden van het object
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist > maxDistance + 1) { // +1 marge voor de grootte van het object
-                shopWindow.style.display = 'none';
-            }
+    if (shopWindow.style.display === 'flex' && currentOpenShop) {
+        const dx = currentOpenShop.x - ball.x;
+        const dy = currentOpenShop.y - ball.y;
+        // Gebruik manhattan distance of euclidische afstand naar de rand van het object
+        // Simpele check: afstand tot het midden van het object
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist > maxDistance + 1) { // +1 marge voor de grootte van het object
+            document.getElementById('closeShopBtn').click(); // Gebruik de sluit-knop logica
         }
     }
 
@@ -4123,16 +4683,26 @@ function loop(time) {
                 const isWide = obj.width === 2; // Check voor brede objecten
                 let finalImg;
 
-                if (obj.name === "Pong") {
+                    if (obj.runtimeImage) {
+                        finalImg = obj.runtimeImage;
+                    } else if (obj.name === "Pong") {
                     finalImg = pongImg;
                 } else if (obj.name === "Winkel") {
                     finalImg = winkelImg;
                 } else if (obj.name === "Container") {
                     finalImg = containerImg;
+                } else if (obj.name === "Prullenbak") {
+                    finalImg = trashImg;
+                } else if (obj.name === "Brede Prullenbak") {
+                    finalImg = trashImg96B;
                 } else if (obj.name === "Grote Container") {
                     finalImg = containerImg96;
                 } else if (obj.name === "Brede Container") {
                     finalImg = containerImg96B;
+                } else if (obj.name === "Prullenbak") {
+                    finalImg = trashImg;
+                } else if (obj.name === "Brede Prullenbak") {
+                    finalImg = trashImg96B;
                 } else if (obj.moveable) {
                     finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
                 } else {
@@ -4253,12 +4823,22 @@ function loop(time) {
                     const isWide = objectToPreview.width === 2;
                     let finalImg;
 
-                    if (objectToPreview.name === "Pong") {
+                    if (objectToPreview.runtimeImage) {
+                        finalImg = objectToPreview.runtimeImage;
+                    } else if (objectToPreview.name === "Pong") {
                         finalImg = pongImg;
                     } else if (objectToPreview.name === "Winkel") {
                         finalImg = winkelImg;
                     } else if (objectToPreview.name === "Container") {
                         finalImg = containerImg;
+                    } else if (objectToPreview.name === "Grote Container") {
+                        finalImg = containerImg96;
+                    } else if (objectToPreview.name === "Brede Container") {
+                        finalImg = containerImg96B;
+                    } else if (objectToPreview.name === "Prullenbak") {
+                        finalImg = trashImg;
+                    } else if (objectToPreview.name === "Brede Prullenbak") {
+                        finalImg = trashImg96B;
                     } else if (objectToPreview.moveable) {
                         finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
                     } else {
