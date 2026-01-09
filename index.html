@@ -1,105 +1,5132 @@
 <!DOCTYPE html>
 <html lang="nl">
-<head>
-<meta charset="UTF-8">
-<title>Habbo Clone</title>
-<link rel="stylesheet" href="css/style.css">
-</head>
-<body>
+	<head>
+		<meta charset="UTF-8" />
+		<title>Habbo Clone</title>
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+				background: #222;
+			}
 
-<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+			canvas {
+				display: block;
+				cursor: pointer;
+				image-rendering: pixelated; /* Zorgt voor scherpe weergave op alle schermen */
+			}
 
-<button id="zoomIn">+</button>
-<button id="zoomOut">-</button>
-<button id="centerCam">Center</button>
+			/* ───────────────────────────── */
+			/* Algemene knoppen */
+			/* ───────────────────────────── */
+			button {
+				font-family: Arial, sans-serif;
+				cursor: pointer;
+				border: none; /* Geen rand */
+				background: transparent; /* Geen achtergrond */
+				padding: 0;
+			}
 
-<div id="footer">
+			/* Zoom knoppen */
+			#zoomIn,
+			#zoomOut,
+			#centerCam {
+				position: absolute;
+				top: 10px;
+				width: 24px;
+				height: 24px;
+			}
+			#zoomIn {
+				left: 78px; /* Max/Zoom rechts */
+			}
+			#zoomOut {
+				left: 10px; /* Min links */
+			}
+			#centerCam {
+				left: 44px; /* Center midden */
+			}
 
-  <div class="footer-left">
-    <button id="buildBtn">Bouwen</button>
-    <button id="inventoryBtn">Inventaris</button>
-  </div>
+			/* Algemene stijl voor alle iconen in knoppen */
+			button img {
+				image-rendering: pixelated;
+				image-rendering: -moz-crisp-edges;
+				image-rendering: crisp-edges;
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+			}
 
-  <div class="chat-group">
-    <input id="chatInput" type="text" placeholder="Typ hier je bericht..." />
-    <div id="charCounter">0 / 80</div>
-  </div>
+			/* ───────────────────────────── */
+			/* Footer / chat input */
+			/* ───────────────────────────── */
+			#footer {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				height: 50px;
+				background: rgba(0, 0, 0, 0.85);
+				display: flex;
+				align-items: center;
+				justify-content: center; /* Centreer de chat-groep */
+				padding: 0 20px; /* Wat ruimte aan de zijkanten */
+				box-sizing: border-box;
+			}
 
-  <div class="footer-right">
-    <button id="openChatLog">Open Chat</button>
-  </div>
+			.footer-left,
+			.footer-right {
+				position: absolute;
+				top: 50%;
+				transform: translateY(-50%);
+				display: flex;
+				gap: 10px;
+				width: 250px; /* Vaste breedte om de chat-input niet te verstoren */
+			}
+			.footer-left {
+				left: 20px;
+				gap: 20px; /* Meer ruimte tussen knoppen */
+			}
+			.footer-right {
+				right: 20px;
+				justify-content: flex-end;
+			}
 
-</div>
+			#chatInput {
+				width: 300px;
+				padding: 6px;
+				font-size: 14px;
+				border-radius: 24px;
+				border: none;
+				outline: none;
+			}
 
-<div id="buildMenu" style="display: none;">
-  <div id="buildCategoryMenu">
-    <button class="category-btn selected" data-category="objecten" title="Objecten">📦</button>
-    <button class="category-btn" data-category="kleur" title="Kleur">🎨</button>
-  </div>
+			#charCounter {
+				color: #aaa;
+				font-size: 12px;
+				font-family: Arial, sans-serif;
+				min-width: 60px;
+				text-align: left;
+			}
 
-  <div id="buildMainContent">
-    <div id="buildMenuHeader">
-        <span>Bouwmodus</span>
-        <span class="close-btn" id="closeBuildMenuBtn">×</span>
-    </div>
+			/* Nieuwe container voor de hele chat-groep */
+			.chat-group {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
 
-    <!-- Weergave voor Objecten Categorie -->
-    <div id="objectCategoryView" style="flex-direction: row;"> <!-- Aangepast voor sub-categorie menu -->
-      <div id="objectSubCategoryMenu">
-        <!-- Sub-categorie knoppen worden hier dynamisch toegevoegd -->
-      </div>
-      <div style="width: 100%; height: 100%;"> <!-- Wrapper voor tools en content -->
-        <div id="buildTools">
-          <button id="moveToolBtn" class="tool-btn" title="Verplaatsen">↔️</button>
-          <button id="deleteToolBtn" class="tool-btn" title="Verwijderen">🗑️</button>
-        </div>
-        <div id="buildMenuContent">
-          <!-- Items worden hier dynamisch toegevoegd -->
-        </div>
-      </div>
-    </div>
+			#openChatLog,
+			#buildBtn,
+			#inventoryBtn,
+			#adminBtn {
+				width: 24px;
+				height: 24px;
+			}
+			/* ───────────────────────────── */
+			/* Bouwmenu */
+			/* ───────────────────────────── */
+			#buildMenu {
+				position: absolute; /* Nodig voor verplaatsen */
+				left: 40px;
+				top: 80px;
+				/* 60px voor categorieën + 450px voor content */
+				width: 510px;
+				height: 470px; /* Iets hoger gemaakt voor de color picker */
+				background: rgba(17, 17, 17, 0.85);
+				border: 1px solid rgba(255, 255, 255, 0.85);
+				border-radius: 10px;
+				display: none; /* Start verborgen, wordt 'flex' in JS */
+				z-index: 20;
+				overflow: hidden; /* Zorgt dat content binnen de afgeronde hoeken blijft */
+				flex-direction: row; /* Categorieën links, content rechts */
+			}
 
-    <!-- Weergave voor Kleur Categorie -->
-    <div id="colorCategoryView">
-      <div id="colorTools">
-        <button class="tool-btn selected" data-tool="brush" title="Kwast">🖌️</button>
-        <button class="tool-btn" data-tool="bucket" title="Verfemmer">🪣</button>
-      </div>
-      <div id="colorPickerWrapper">
-        <div id="color-picker-container"></div>
-        <div id="colorDetails">
-          <div id="colorPreview"></div>
-          <input type="text" id="hexInput" maxlength="7">
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+			#buildCategoryMenu {
+				width: 60px;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.2);
+				border-right: 1px solid rgba(255, 255, 255, 0.2);
+				padding: 10px;
+				box-sizing: border-box;
+				display: flex;
+				flex-direction: column;
+				gap: 20px; /* Meer ruimte */
+				align-items: center; /* Centreer items voor vierkante knoppen */
+			}
 
-<div id="chatLog">
-  <div id="chatLogHeader">
-    <span>Chat geschiedenis</span>
-    <span class="close-btn" id="closeChatLogBtn">×</span>
-  </div>
-  <div id="chatLogContent"></div>
-</div>
+			.category-btn {
+				width: 24px;
+				height: 24px;
+				background: transparent;
+				border: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
 
-<div id="inventory" style="display: none;">
-  <div id="inventoryHeader">
-    <span>Inventaris</span>
-    <span class="close-btn" id="closeInventoryBtn">×</span>
-  </div>
-  <div id="inventoryTools">
-    <div id="wallet">€0.00</div>
-    <button id="diaryBtn" class="tool-btn" title="Dagboek">📓</button>
-  </div>
-  <div id="inventoryContent">
-    <!-- Inventaris items komen hier -->
-  </div>
-</div>
+			#buildMainContent {
+				width: 450px;
+			}
 
-<canvas id="canvas"></canvas>
+			#objectCategoryView {
+				display: flex; /* Standaard zichtbaar */
+				flex-direction: column;
+				height: 100%;
+			}
 
-<script src="scripts/app.js"></script>
-</body>
+			#colorCategoryView {
+				display: none; /* Standaard verborgen */
+				box-sizing: border-box;
+				height: calc(100% - 36px); /* Volledige hoogte minus de header */
+				display: flex;
+				flex-direction: row;
+			}
+
+			#objectSubCategoryMenu {
+				display: flex;
+				flex-direction: column;
+				gap: 20px; /* Meer ruimte */
+				width: 60px;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.2);
+				border-right: 1px solid rgba(255, 255, 255, 0.2);
+				padding: 10px;
+				box-sizing: border-box;
+				align-items: center; /* Horizontaal centreren */
+			}
+
+			#colorTools {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				width: 60px;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.2);
+				border-right: 1px solid rgba(255, 255, 255, 0.2);
+				padding: 10px;
+				box-sizing: border-box;
+			}
+
+			#colorPickerWrapper {
+				flex-grow: 1;
+				padding: 10px;
+				display: flex;
+				flex-direction: column; /* Zorgt ervoor dat de color picker en details onder elkaar staan */
+				justify-content: center;
+				align-items: center;
+			}
+
+			#colorPicker {
+				width: 100%;
+				height: 100%;
+				cursor: pointer;
+				-webkit-color-swatch-wrapper {
+					padding: 0;
+				} /* Webkit specifieke styling */
+				border: none;
+				background: none;
+			}
+
+			#colorDetails {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin-top: 10px;
+			}
+
+			#colorPreview {
+				width: 40px;
+				height: 40px;
+				border: 1px solid #fff;
+				border-radius: 4px;
+			}
+
+			#hexInput {
+				width: 100px;
+				padding: 8px;
+				background: #222;
+				border: 1px solid #555;
+				border-radius: 4px;
+				color: #fff;
+				font-family: monospace;
+				font-size: 14px;
+			}
+
+			#buildTools {
+				padding: 5px 10px; /* Minder verticale padding */
+				/* border-top is nu border-bottom op de header */
+				display: flex;
+				gap: 10px;
+				justify-content: flex-end; /* Lijn knoppen rechts uit */
+				background: rgba(0, 0, 0, 0.1); /* Lichte achtergrond voor contrast */
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Scheidingslijn */
+			}
+
+			.tool-btn {
+				width: 24px;
+				height: 24px;
+				background: transparent;
+				border: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			#buildMenuHeader {
+				height: 36px;
+				line-height: 36px;
+				padding: 0 12px;
+				background: #1a1a1a;
+				border-radius: 10px 10px 0 0;
+				cursor: move;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2); /* Scheidingslijn */
+				user-select: none;
+				color: white;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+			}
+
+			#buildMenuContent {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr); /* Forceer 3 kolommen die de ruimte vullen */
+				gap: 10px;
+				padding: 10px; /* Padding voor de content zelf */
+				height: calc(100% - 51px); /* Hoogte minus de dunnere #buildTools balk (50px + 1px border) */
+				overflow-y: auto;
+				box-sizing: border-box;
+				justify-items: center; /* Centreer items binnen hun grid cel */
+				align-items: start; /* Items bovenaan beginnen in hun cell */
+				align-content: start; /* Zorgt dat rijen bovenaan beginnen en niet verspreiden */
+			}
+
+			.build-item {
+				background: rgba(0, 0, 0, 0.4); /* Donkerder met transparantie */
+				padding: 10px;
+				border-radius: 6px;
+				cursor: pointer;
+				border: 2px solid transparent;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between; /* Plaatje boven, tekst onder */
+				gap: 8px;
+				color: white;
+				font-size: 12px;
+				font-family: Arial, sans-serif; /* Consistent lettertype */
+				width: 90px;
+				height: 110px; /* Vaste hoogte teruggezet */
+			}
+
+			.build-item:hover {
+				background: #555;
+			}
+
+			.build-item.selected {
+				border-color: white;
+			}
+
+			#buildMenuHeader,
+			#chatLogHeader,
+			#inventoryHeader,
+			#pongHeader,
+			#shopHeader,
+			#containerHeader {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.close-btn {
+				font-size: 24px;
+				line-height: 1;
+				cursor: pointer;
+				padding: 0 5px;
+			}
+
+			.build-item img {
+				height: 64px; /* Vaste hoogte voor consistentie */
+				image-rendering: pixelated;
+			}
+
+			/* NIEUW: Stijl voor inventory items (alleen plaatje, geen tekst) */
+			.inventory-item {
+				background: transparent;
+				border-radius: 6px;
+				cursor: grab;
+				border: none;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				width: 100px;
+				height: 100px;
+				padding: 5px;
+				box-sizing: border-box;
+				user-select: none;
+			}
+			.inventory-item:hover {
+				background: transparent;
+			}
+			.inventory-item img {
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+				pointer-events: none;
+				image-rendering: pixelated;
+			}
+
+			#chatLog {
+				position: absolute;
+				bottom: 60px;
+				right: 20px;
+				width: 320px;
+				height: 400px;
+
+				background: rgba(17, 17, 17, 0.85); /* Transparantie toegevoegd */
+				color: white;
+				border: 1px solid rgba(255, 255, 255, 0.85); /* Transparantie toegevoegd */
+				border-radius: 10px;
+
+				font-family: Arial;
+				font-size: 14px;
+
+				display: none;
+				overflow: hidden;
+				z-index: 20;
+			}
+
+			#inventory {
+				position: absolute;
+				left: 150px;
+				top: 120px;
+				width: 400px; /* Breder gemaakt */
+				height: 450px; /* Langer gemaakt */
+				background: rgba(17, 17, 17, 0.85); /* Transparantie toegevoegd */
+				color: white;
+				border: 1px solid rgba(255, 255, 255, 0.85); /* Transparantie toegevoegd */
+				border-radius: 10px;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				display: none; /* Start verborgen */
+				overflow: hidden;
+				z-index: 20;
+				flex-direction: column; /* Zorgt dat header en content onder elkaar staan */
+			}
+
+			#chatLogHeader {
+				height: 36px;
+				line-height: 36px;
+				padding: 0 12px;
+
+				background: #1a1a1a;
+				border-bottom: 0px solid white;
+				border-radius: 10px 10px 0 0;
+
+				cursor: move;
+				user-select: none;
+			}
+
+			#inventoryHeader,
+			#pongHeader,
+			#shopHeader,
+			#containerHeader {
+				height: 36px;
+				line-height: 36px;
+				padding: 0 12px;
+				background: #1a1a1a;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+				border-radius: 10px 10px 0 0;
+				cursor: move;
+				user-select: none;
+			}
+
+			#inventoryTools {
+				padding: 5px 10px; /* Minder verticale padding */
+				display: flex;
+				gap: 10px;
+				justify-content: space-between; /* Wallet links, dagboek rechts */
+				align-items: center; /* Verticaal centreren */
+				background: rgba(0, 0, 0, 0.1);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+			}
+
+			#wallet {
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				color: white; /* Goud-achtige kleur */
+				padding: 5px 10px;
+				border-radius: 5px;
+			}
+
+			#transactionFeed {
+				font-family: Arial, sans-serif;
+				font-size: 12px; /* 2px kleiner dan wallet (14px) */
+				opacity: 0;
+			}
+
+			#chatLogContent {
+				height: calc(100% - 36px);
+				padding: 10px;
+				overflow-y: auto;
+				box-sizing: border-box;
+			}
+
+			#inventoryContent {
+				height: calc(100% - 36px - 51px); /* Hoogte minus header en dunnere tools paneel */
+				padding: 10px;
+				overflow: hidden; /* Scrollen uitgeschakeld zoals gevraagd */
+				box-sizing: border-box;
+				display: block; /* Was grid, nu block voor vrije plaatsing */
+				position: relative; /* Zodat items absoluut gepositioneerd kunnen worden */
+			}
+
+			/* ───── Pong Minigame ───── */
+			#pongGame {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				width: 600px; /* Breder gemaakt zoals een tafel */
+				height: 336px; /* 300 canvas + 36 header */
+				background: rgba(17, 17, 17, 0.85); /* Subtiele transparantie */
+				border: 1px solid rgba(255, 255, 255, 0.85);
+				border-radius: 10px;
+				display: none;
+				z-index: 30; /* Bovenop alles */
+				flex-direction: column;
+				overflow: hidden;
+				color: white;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+			}
+			#pongScoreboard {
+				display: flex;
+				justify-content: space-between;
+				padding: 8px 12px;
+				background: rgba(0, 0, 0, 0.2);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+				font-size: 14px;
+				font-weight: bold;
+			}
+
+			#pongCanvas {
+				background: rgba(0, 0, 0, 0.6); /* Half-transparant speelveld */
+				width: 100%;
+				height: 264px; /* Aangepast voor scorebord */
+				cursor: default; /* Cursor wordt via JS geregeld */
+			}
+
+			/* Achtergrond voor Pong om clicks af te vangen en cursor te verbergen */
+			#pongBackdrop {
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				z-index: 29; /* Net onder de pong game (30) */
+				display: none;
+			}
+
+			/* Notificatie paneel */
+			#notification {
+				position: absolute;
+				top: 20%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background: rgba(17, 17, 17, 0.85);
+				color: white;
+				padding: 15px 25px;
+				border-radius: 10px;
+				border: 1px solid rgba(255, 255, 255, 0.85);
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				z-index: 100;
+				pointer-events: none; /* Klik er doorheen */
+				opacity: 0;
+				transition: opacity 0.5s ease-in-out;
+			}
+
+			/* ───── Winkel Venster ───── */
+			#shopWindow {
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				transform: translate(-50%, -50%);
+				width: 380px; /* Breder gemaakt voor mooiere spacing */
+				height: 550px;
+				background: rgba(17, 17, 17, 0.95);
+				border: 1px solid rgba(255, 255, 255, 0.85);
+				border-radius: 10px;
+				display: none;
+				z-index: 25;
+				flex-direction: column;
+				overflow: hidden;
+				color: white;
+				font-family: Arial, sans-serif;
+			}
+
+			#shopContent {
+				padding: 10px;
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				grid-template-rows: repeat(6, 1fr);
+				gap: 5px;
+				overflow-y: auto;
+				justify-items: center;
+				height: 360px;
+			}
+
+			#shopOutput {
+				flex-grow: 1;
+				background: rgba(0, 0, 0, 0.3);
+				border: 2px solid rgba(255, 255, 255, 0.2);
+				padding: 10px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				position: relative;
+				margin: 10px;
+				border-radius: 6px;
+			}
+
+			/* ───── Container Venster ───── */
+			#containerWindow {
+				position: absolute;
+				left: 600px; /* Rechts van inventory */
+				top: 120px;
+				width: 260px;
+				height: 300px;
+				background: rgba(17, 17, 17, 0.85);
+				color: white;
+				border: 1px solid rgba(255, 255, 255, 0.85);
+				border-radius: 10px;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				display: none;
+				overflow: hidden;
+				z-index: 20;
+				flex-direction: column;
+			}
+
+			#containerTools {
+				padding: 5px 10px;
+				display: flex;
+				gap: 10px;
+				justify-content: flex-end; /* Knoppen rechts uitlijnen */
+				align-items: center;
+				background: rgba(0, 0, 0, 0.1);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+			}
+
+			/* ───── Custom scrollbar (WebKit) voor Chat & Bouwmenu ───── */
+			#chatLogContent::-webkit-scrollbar,
+			#buildMenuContent::-webkit-scrollbar,
+			#inventoryContent::-webkit-scrollbar {
+				width: 6px;
+			}
+
+			#chatLogContent::-webkit-scrollbar-track,
+			#buildMenuContent::-webkit-scrollbar-track,
+			#inventoryContent::-webkit-scrollbar-track {
+				background: transparent;
+			}
+
+			#chatLogContent::-webkit-scrollbar-thumb,
+			#buildMenuContent::-webkit-scrollbar-thumb,
+			#inventoryContent::-webkit-scrollbar-thumb {
+				background: white;
+				border-radius: 6px;
+			}
+
+			/* ───── Custom scrollbar (Firefox) voor Chat & Bouwmenu ───── */
+			#chatLogContent,
+			#buildMenuContent,
+			#inventoryContent {
+				scrollbar-width: thin;
+				scrollbar-color: white transparent;
+			}
+
+			/* ───── Upload Modal ───── */
+			#uploadModal {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background: rgba(17, 17, 17, 0.95);
+				border: 1px solid white;
+				padding: 20px;
+				border-radius: 10px;
+				z-index: 100;
+				color: white;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				width: 400px;
+				display: none; /* Wordt 'flex' via JS */
+				flex-direction: column;
+				gap: 15px;
+			}
+
+			#customObjectName {
+				width: 100%;
+				padding: 8px;
+				background: #333;
+				border: 1px solid #555;
+				color: white;
+				font-family: Arial, sans-serif;
+				font-size: 14px;
+				border-radius: 4px;
+				box-sizing: border-box;
+			}
+
+			#templateGrid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 10px;
+				max-height: 300px;
+				overflow-y: auto;
+			}
+		</style>
+	</head>
+	<body>
+		<script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+
+		<button id="zoomIn" title="Zoom In"><img src="icons/max.png" /></button>
+		<button id="zoomOut" title="Zoom Out"><img src="icons/min.png" /></button>
+		<button id="centerCam" title="Center"><img src="icons/center.png" /></button>
+
+		<div id="footer">
+			<div class="footer-left">
+				<button id="adminBtn" title="Admin"><img src="icons/admin.png" /></button>
+				<button id="buildBtn" title="Bouwen"><img src="icons/buildmenu.png" /></button>
+				<button id="inventoryBtn" title="Inventaris"><img src="icons/inventory.png" /></button>
+			</div>
+
+			<div class="chat-group">
+				<input id="chatInput" type="text" placeholder="Typ hier je bericht..." />
+				<div id="charCounter">0 / 80</div>
+			</div>
+
+			<div class="footer-right">
+				<button id="openChatLog" title="Chat"><img src="icons/chat.png" /></button>
+			</div>
+		</div>
+
+		<div id="buildMenu" style="display: none">
+			<div id="buildCategoryMenu">
+				<button class="category-btn selected" data-category="objecten" title="Objecten"><img src="icons/object_active.png" /></button>
+				<button class="category-btn" data-category="kleur" title="Kleur"><img src="icons/color.png" /></button>
+				<button class="category-btn" id="adminRoomBtn" data-category="kamers" title="Kamers" style="display: none; font-size: 18px">
+					🏠
+				</button>
+			</div>
+
+			<div id="buildMainContent">
+				<div id="buildMenuHeader">
+					<span>Bouwmodus</span>
+					<span class="close-btn" id="closeBuildMenuBtn">×</span>
+				</div>
+
+				<!-- Weergave voor Objecten Categorie -->
+				<div id="objectCategoryView" style="flex-direction: row">
+					<!-- Aangepast voor sub-categorie menu -->
+					<div id="objectSubCategoryMenu">
+						<!-- Sub-categorie knoppen worden hier dynamisch toegevoegd -->
+					</div>
+					<div style="width: 100%; height: 100%">
+						<!-- Wrapper voor tools en content -->
+						<div id="buildTools">
+							<button id="moveToolBtn" class="tool-btn" title="Verplaatsen"><img src="icons/place.png" /></button>
+							<button id="deleteToolBtn" class="tool-btn" title="Verwijderen"><img src="icons/trash.png" /></button>
+							<button id="adminDeleteToolBtn" class="tool-btn" title="Verwijder Item" style="display: none">
+								<img src="icons/delete.png" />
+							</button>
+							<button id="uploadToolBtn" class="tool-btn" title="Upload Custom Item" style="display: none">
+								<img src="icons/add.png" />
+							</button>
+						</div>
+						<div id="buildMenuContent">
+							<!-- Items worden hier dynamisch toegevoegd -->
+						</div>
+					</div>
+				</div>
+
+				<!-- Weergave voor Kleur Categorie -->
+				<div id="colorCategoryView">
+					<div id="colorTools">
+						<<<<<<< HEAD
+						<button class="tool-btn selected" data-tool="brush" title="Kwast">🖌️</button>
+						<button class="tool-btn" data-tool="bucket" title="Verfemmer">🪣</button>
+						=======
+						<button class="tool-btn selected" data-tool="brush" title="Kwast"><img src="icons/paint_active.png" /></button>
+						<button class="tool-btn" data-tool="bucket" title="Verfemmer"><img src="icons/fill.png" /></button>
+						>>>>>>> main
+					</div>
+					<div id="colorPickerWrapper">
+						<div id="color-picker-container"></div>
+						<div id="colorDetails">
+							<div id="colorPreview"></div>
+							<input type="text" id="hexInput" maxlength="7" />
+						</div>
+					</div>
+				</div>
+
+				<!-- Weergave voor Kamers Categorie -->
+				<div
+					id="roomCategoryView"
+					style="display: none; padding: 20px; color: white; font-family: Arial; flex-direction: column; gap: 15px">
+					<h3 style="margin: 0 0 5px 0; font-weight: normal">Nieuwe Kamer Aanmaken</h3>
+
+					<div>
+						<label for="roomNameInput" style="display: block; margin-bottom: 5px; font-size: 14px">Kamer Naam:</label>
+						<input
+							type="text"
+							id="roomNameInput"
+							placeholder="Naam van de kamer"
+							style="
+								width: 90%;
+								padding: 8px;
+								background: #333;
+								border: 1px solid #666;
+								color: white;
+								border-radius: 4px;
+								font-size: 14px;
+							" />
+					</div>
+
+					<div>
+						<label style="display: block; margin-bottom: 5px; font-size: 14px">Kamer Grootte:</label>
+						<div id="roomSizeSelector" style="display: flex; flex-wrap: wrap; gap: 15px; font-size: 14px">
+							<label style="cursor: pointer"><input type="radio" name="roomSize" value="5" /> 5x5</label>
+							<label style="cursor: pointer"><input type="radio" name="roomSize" value="10" checked /> 10x10</label>
+							<label style="cursor: pointer"><input type="radio" name="roomSize" value="20" /> 20x20</label>
+							<label style="cursor: pointer"><input type="radio" name="roomSize" value="30" /> 30x30</label>
+						</div>
+					</div>
+
+					<button
+						id="createRoomBtn"
+						style="
+							padding: 10px 15px;
+							background: #4caf50;
+							color: white;
+							border: none;
+							border-radius: 4px;
+							cursor: pointer;
+							align-self: flex-start;
+							margin-top: 10px;
+						">
+						Kamer Aanmaken
+					</button>
+
+					<hr style="width: 100%; border: 0; border-top: 1px solid #555; margin: 10px 0" />
+
+					<h3 style="margin: 0 0 5px 0; font-weight: normal">Level Data (Export/Import)</h3>
+					<textarea
+						id="levelDataOutput"
+						rows="6"
+						style="width: 90%; background: #333; color: #fff; border: 1px solid #555; font-family: monospace; font-size: 11px"
+						placeholder="JSON data verschijnt hier..."></textarea>
+					<div style="display: flex; gap: 10px">
+						<button
+							id="exportLevelBtn"
+							style="padding: 8px 12px; background: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer">
+							Export Data
+						</button>
+						<button
+							id="importLevelBtn"
+							style="padding: 8px 12px; background: #ff9800; color: white; border: none; border-radius: 4px; cursor: pointer">
+							Import Data
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div id="chatLog">
+			<div id="chatLogHeader">
+				<span>Chat geschiedenis</span>
+				<span class="close-btn" id="closeChatLogBtn">×</span>
+			</div>
+			<div id="chatLogContent"></div>
+		</div>
+
+		<div id="uploadModal">
+			<div style="display: flex; justify-content: space-between; align-items: center">
+				<h3 style="margin: 0">Custom Object Uploaden</h3>
+				<span id="closeUploadModalCross" style="cursor: pointer; font-size: 24px; line-height: 1">×</span>
+			</div>
+
+			<input type="text" id="customObjectName" placeholder="Naam van object (optioneel)" />
+
+			<div style="font-size: 14px; color: #ccc">Kies een template voor de functie:</div>
+			<div id="templateGrid"></div>
+			<input type="file" id="customFileUpload" style="display: none" accept="image/*" />
+		</div>
+
+		<div id="inventory" style="display: none">
+			<div id="inventoryHeader">
+				<span>Inventaris</span>
+				<span class="close-btn" id="closeInventoryBtn">×</span>
+			</div>
+			<div id="inventoryTools">
+				<div style="display: flex; align-items: center; gap: 8px">
+					<div id="wallet">€0.00</div>
+					<div id="transactionFeed"></div>
+				</div>
+				<button id="diaryBtn" class="tool-btn" title="Dagboek">📓</button>
+			</div>
+			<div id="inventoryContent">
+				<!-- Inventaris items komen hier -->
+			</div>
+		</div>
+
+		<div id="pongBackdrop"></div>
+
+		<div id="notification"></div>
+
+		<div id="shopWindow">
+			<div id="shopHeader">
+				<span>Winkel</span>
+				<span class="close-btn" id="closeShopBtn">×</span>
+			</div>
+			<div id="shopContent"></div>
+			<div id="shopOutput"></div>
+		</div>
+
+		<div id="containerWindow">
+			<div id="containerHeader">
+				<span>Container</span>
+				<span class="close-btn" id="closeContainerBtn">×</span>
+			</div>
+			<div id="containerTools" style="display: none"></div>
+			<div id="containerContent" style="position: relative; height: calc(100% - 36px); overflow: hidden"></div>
+		</div>
+
+		<div id="pongGame">
+			<div id="pongHeader">
+				<!-- Uniek ID voor slepen -->
+				<span>Tafeltennis</span>
+				<span class="close-btn" id="closePongBtn">×</span>
+			</div>
+			<div id="pongScoreboard">
+				<div class="score-player">Speler: <span id="playerScore">0</span></div>
+				<div class="score-ai">Tegenstander: <span id="aiScore">0</span></div>
+			</div>
+			<canvas id="pongCanvas" width="600" height="264"></canvas>
+		</div>
+
+		<canvas id="canvas"></canvas>
+
+		<<<<<<< HEAD
+		<script src="scripts/app.js"></script>
+		=======
+		<script>
+			(function () {
+				// Start van de IIFE
+				const canvas = document.getElementById("canvas");
+				const ctx = canvas.getContext("2d");
+
+				// High DPI setup
+				const dpr = window.devicePixelRatio || 1;
+				canvas.width = window.innerWidth * dpr;
+				canvas.height = window.innerHeight * dpr;
+				canvas.style.width = window.innerWidth + "px";
+				canvas.style.height = window.innerHeight + "px";
+				ctx.imageSmoothingEnabled = false; // Zorgt voor scherpe pixel-art (geen wazige randjes bij zoomen)
+
+				const MAX_CHARS = 80;
+				const charCounter = document.getElementById("charCounter");
+
+				const urlParams = new URLSearchParams(window.location.search);
+				const sizeParam = urlParams.get("size");
+
+				let tileW = 64;
+				let tileH = 32;
+				let mapW = 25;
+				let mapH = 25;
+
+				if (sizeParam && !isNaN(parseInt(sizeParam)) && [5, 10, 20, 30].includes(parseInt(sizeParam))) {
+					const newSize = parseInt(sizeParam);
+					mapW = newSize;
+					mapH = newSize;
+				}
+
+				// Snelheid speler FPS Hz
+				let lastTime = performance.now();
+
+				// Speler
+				const ball = { x: 0.5, y: 0.5 };
+				let hopOffset = 0;
+
+				// Jump variables
+				let jumpProgress = 0;
+				let jumping = false;
+				let jumpStart = { x: 0, y: 0 };
+				let jumpEnd = { x: 0, y: 0 };
+				const jumpHeight = 12;
+
+				// Hover
+				let hoverCell = null;
+
+				// Click-to-walk
+				let path = [];
+				let highlightedPath = []; // Voor het tekenen van het volledige pad
+
+				// Snelheid
+				const speed = 0.1;
+
+				// Zoom
+				const zoomLevels = [0.8, 0.9, 1.0, 1.2, 1.4]; // Fijnere zoom-stappen
+				let currentZoomIndex = 2; // Start op neutraal niveau (1.0)
+				let scale = zoomLevels[currentZoomIndex];
+
+				// Camera
+				let camX = 0;
+				let camY = 0;
+
+				// Drag-camera
+				let isCameraDragging = false; // Nieuwe variabele voor camera slepen
+				let isObjectDragging = false; // Nieuwe variabele voor object slepen
+				let isItemDragging = false; // NIEUW: Variabele voor het slepen van items
+				let isDraggingFromInventory = false; // NIEUW: Houdt bij of we vanuit de inventaris slepen
+				let isDraggingFromShop = false; // NIEUW: Houdt bij of we vanuit de winkel slepen
+				let isDraggingFromContainer = false; // NIEUW: Houdt bij of we vanuit een container slepen
+				let isRearrangingInventory = false; // NIEUW: Voor het verplaatsen binnen de inventaris
+				let isRearrangingContainer = false; // NIEUW: Voor het verplaatsen binnen de container
+				let activeInventoryItem = null; // NIEUW: Het item dat we binnen de inventaris verplaatsen
+				let activeContainerItem = null; // NIEUW: Het item dat we binnen de container verplaatsen
+				let inventoryDragOffset = { x: 0, y: 0 }; // NIEUW: Offset voor slepen in inventaris
+				let containerDragOffset = { x: 0, y: 0 }; // NIEUW: Offset voor slepen in container
+				let dragStart = { x: 0, y: 0 };
+				let camStart = { x: 0, y: 0 };
+
+				// Smooth center
+				let camTargetX = 0;
+				let camTargetY = 0;
+				let camSmooth = false;
+
+				// Bouwmodus
+				let highestZ = 21; // Startwaarde voor z-index management
+
+				function bringToFront(element) {
+					// Reset z-index van alle vensters naar een basiswaarde
+					document.getElementById("buildMenu").style.zIndex = 20;
+					document.getElementById("chatLog").style.zIndex = 20;
+					document.getElementById("inventory").style.zIndex = 20;
+					document.getElementById("shopWindow").style.zIndex = 20;
+					document.getElementById("containerWindow").style.zIndex = 20;
+					// Plaats het geklikte element op de voorgrond
+					element.style.zIndex = highestZ;
+				}
+
+				function closeSecondaryWindows() {
+					document.getElementById("chatLog").style.display = "none";
+					document.getElementById("inventory").style.display = "none";
+					document.getElementById("shopWindow").style.display = "none";
+					document.getElementById("containerWindow").style.display = "none";
+				}
+
+				function closeAllWindows() {
+					closeSecondaryWindows();
+					if (isBuildMode) {
+						// Gebruik de bestaande klik-logica om de bouwmodus correct af te sluiten en op te ruimen
+						buildBtn.click();
+					}
+				}
+
+				let isBuildMode = false;
+				let selectedBuildObject = null;
+				let isBuildObjectFlipped = false; // Voor het spiegelen van objecten
+				let buildTool = "place"; // 'place', 'move', 'delete'
+				let movingObject = null; // Object dat wordt verplaatst
+
+				let selectedColor = "#ff0000"; // Default kleur
+				let windowStatesBeforeDrag = null; // Onthoudt welke vensters open waren
+				let draggedObject = null; // Voor het verslepen van 'moveable' objecten buiten bouwmodus
+				let draggedItem = null; // NIEUW: Item dat wordt versleept
+				let draggedItemOriginalPos = null; // NIEUW: Originele positie van het versleepte item
+				let dragImageElement = null; // NIEUW: DOM element voor visuele weergave tijdens slepen
+				let draggedObjectOriginalPos = null;
+				let camOriginalPos = null; // Voor het resetten van de camera na het slepen van een object
+
+				let activeObjectSubCategory = "objects"; // Start met 'objects' geselecteerd
+				let activeMenuContext = "player"; // 'player' or 'admin'
+				let activeBuildCategory = "objecten"; // 'objecten', 'kleur', etc.
+				let colorTool = "brush"; // 'brush', 'bucket'
+
+				let tileColors = {}; // Slaat de aangepaste tegelkleuren op
+				let wallColors = {}; // Slaat de muurkleuren op per segment, bv: { 'top_5': '#ff0000' }
+				let wallObjects = []; // Slaat geplaatste muurobjecten op, bv: { wallId: 'top_5', name: 'Muurdecoratie', flipped: false }
+
+				let hoverTarget = null; // Houdt bij wat er gehoverd wordt: { type: 'tile'/'wall', id: 'x,y'/'top'/'left' }
+				let activeInteractionButton = null; // NIEUW: Voor klikbare interacties
+
+				// Object image
+				const objectImg = new Image();
+				objectImg.src = "object_template.png"; // 64x64 symmetrisch
+				const objectImg96 = new Image();
+				objectImg96.src = "object_template_96.png"; // 64x96 symmetrisch
+				const objectImg96B = new Image();
+				objectImg96B.src = "object_template_96_B.png"; // 1 hoog, 2 breed
+				const moveableObjectImg = new Image();
+				moveableObjectImg.src = "object_moveable_template.png";
+				const moveableObjectImg96B = new Image();
+				moveableObjectImg96B.src = "object_moveable_template_96_B.png";
+				const wallItemImg = new Image();
+				wallItemImg.src = "wall_template.png";
+
+				const pongImg = new Image();
+				pongImg.src = "objects/pong.png";
+				const pongPromptImg = new Image();
+				pongPromptImg.src = "prompts/pong.png";
+				const shopPromptImg = new Image();
+				shopPromptImg.src = "prompts/winkel.png";
+				const winkelImg = new Image();
+				winkelImg.src = "winkel_template_96.png";
+				const containerImg = new Image();
+				containerImg.src = "container_template.png";
+				const containerPromptImg = new Image();
+				containerPromptImg.src = "prompts/container.png";
+				const trashPromptImg = new Image();
+				trashPromptImg.src = "prompts/trash.png";
+				const containerImg96 = new Image();
+				containerImg96.src = "container_template_96.png";
+				const containerImg96B = new Image();
+				containerImg96B.src = "container_template_96_B.png";
+				const trashImg = new Image();
+				trashImg.src = "trash_template.png";
+				const trashImg96B = new Image();
+				trashImg96B.src = "trash_template_96_B.png";
+
+				// Nieuwe afbeelding voor oppakbare items
+				const itemImg = new Image();
+				itemImg.src = "item_block.png"; // Zorg ervoor dat dit bestand bestaat
+
+				const itemRoundImg = new Image();
+				itemRoundImg.src = "item_round.png"; // De nieuwe ronde afbeelding
+
+				const currencyItemImg = new Image();
+				currencyItemImg.src = "currency_item.png";
+
+				const currencyItemBigImg = new Image();
+				currencyItemBigImg.src = "currency_item_big.png";
+
+				const itemStickImg = new Image();
+				itemStickImg.src = "item_stick.png";
+
+				const batjeRoodImg = new Image();
+				batjeRoodImg.src = "items/batje_rood.png";
+
+				const batjeZwartImg = new Image();
+				batjeZwartImg.src = "items/batje_zwart.png";
+
+				// Array voor oppakbare items
+				const items = [
+					{ x: 8.5, y: 8.5, vx: 0, vy: 0, mass: 1.2, image: itemImg, z: 0, vz: 0, rotation: 0, vr: 0 },
+					{ x: 12.5, y: 15.5, vx: 0, vy: 0, mass: 1.0, image: itemImg, z: 0, vz: 0, rotation: 0, vr: 0 },
+					// Nieuwe ronde items die kunnen roteren
+					{ x: 10.5, y: 10.5, vx: 0, vy: 0, mass: 0.8, image: itemRoundImg, canRotate: true, z: 0, vz: 0, rotation: 0, vr: 0 },
+					{ x: 14.5, y: 12.5, vx: 0, vy: 0, mass: 0.8, image: itemRoundImg, canRotate: true, z: 0, vz: 0, rotation: 0, vr: 0 },
+					// Currency items
+					{ x: 9.5, y: 9.5, vx: 0, vy: 0, mass: 0.5, image: currencyItemImg, z: 0, vz: 0, rotation: 0, vr: 0, type: "currency" },
+					{ x: 11.5, y: 9.5, vx: 0, vy: 0, mass: 0.5, image: currencyItemBigImg, z: 0, vz: 0, rotation: 0, vr: 0, type: "currency_big" },
+					// Stick item (omvallen)
+					{ x: 12.5, y: 9.5, vx: 0, vy: 0, mass: 0.4, image: itemStickImg, z: 0, vz: 0, rotation: 0, vr: 0, canTopple: true },
+					// Batje Rood (omvallen)
+					{
+						x: 13.5,
+						y: 9.5,
+						vx: 0,
+						vy: 0,
+						mass: 0.4,
+						image: batjeRoodImg,
+						z: 0,
+						vz: 0,
+						rotation: 0,
+						vr: 0,
+						canTopple: true,
+						name: "Batje Rood",
+					},
+					// Batje Zwart (omvallen)
+					{
+						x: 14.5,
+						y: 9.5,
+						vx: 0,
+						vy: 0,
+						mass: 0.4,
+						image: batjeZwartImg,
+						z: 0,
+						vz: 0,
+						rotation: 0,
+						vr: 0,
+						canTopple: true,
+						name: "Batje Zwart",
+					},
+				];
+
+				// Array voor items in de inventaris
+				const inventoryItems = [];
+				let walletBalance = 0.0;
+				const shopOutputItems = []; // Items in de uitgiftebak van de winkel
+				let highestInventoryZ = 10; // Voor z-index management in inventory
+				let highestContainerZ = 10; // Voor z-index management in container
+				let transactionFadeTimeout;
+
+				function addToWallet(amount) {
+					walletBalance += amount;
+					document.getElementById("wallet").textContent = `€${walletBalance.toFixed(2)}`;
+
+					const feed = document.getElementById("transactionFeed");
+					const sign = amount >= 0 ? "+" : "";
+					feed.textContent = `${sign}€${amount.toFixed(2)}`;
+					feed.style.color = amount >= 0 ? "#4cd137" : "#ff4757"; // Groen of Rood
+
+					// Reset animatie
+					feed.style.transition = "none";
+					feed.style.opacity = "1";
+
+					if (transactionFadeTimeout) clearTimeout(transactionFadeTimeout);
+
+					// Start fade out
+					transactionFadeTimeout = setTimeout(() => {
+						feed.style.transition = "opacity 2s ease-out";
+						feed.style.opacity = "0";
+					}, 1000);
+				}
+
+				function showNotification(message) {
+					const notif = document.getElementById("notification");
+					notif.textContent = message;
+					notif.style.display = "block";
+					// Force reflow om transitie te triggeren
+					void notif.offsetWidth;
+					notif.style.opacity = "1";
+
+					setTimeout(() => {
+						notif.style.opacity = "0";
+						setTimeout(() => {
+							notif.style.display = "none";
+						}, 500); // Wacht op transitie
+					}, 3000);
+				}
+
+				// Objecten array
+				const objects = [
+					{ x: 5, y: 5, height: 1, width: 2, depth: 1, flipped: false, name: "Tafel" }, // NIEUW: Tafel (2 breed)
+					{ x: 5, y: 8, height: 1, width: 2, depth: 1, flipped: true, name: "Tafel" }, // NIEUW: Tafel (geroteerd)
+					{ x: 10, y: 5, height: 1, width: 2, depth: 1, flipped: false, name: "Pong" }, // NIEUW: Pong tafel
+					{ x: 10, y: 10, height: 2, flipped: false, name: "Hoge Blok" }, // Hoog object
+					// Extra willekeurige objecten voor testdoeleinden
+					{ x: 15, y: 8, height: 1, flipped: false, name: "Blok" },
+					{ x: 3, y: 18, height: 2, flipped: true, name: "Hoge Blok" }, // Test een geflipt object
+					{ x: 20, y: 20, height: 1, flipped: false, name: "Blok" },
+					{ x: 18, y: 3, height: 2, flipped: false, name: "Hoge Blok" },
+					{ x: 8, y: 12, height: 1, flipped: false, moveable: true, name: "Verplaatsbaar Blok" }, // Nieuw verplaatsbaar object
+					// Winkels om te testen
+					{ x: 16, y: 5, height: 2, flipped: false, name: "Winkel" },
+					{ x: 19, y: 5, height: 2, flipped: true, name: "Winkel" },
+					// Container om te testen
+					{ x: 12, y: 5, height: 1, flipped: false, name: "Container" },
+					{ x: 12, y: 8, height: 2, flipped: false, name: "Grote Container" },
+					{ x: 14, y: 8, height: 1, width: 2, depth: 1, flipped: false, name: "Brede Container" },
+					{ x: 8, y: 8, height: 1, flipped: false, name: "Prullenbak" },
+				];
+
+				function renderInventoryItems() {
+					const inventoryContent = document.getElementById("inventoryContent");
+					inventoryContent.innerHTML = ""; // Maak de lijst leeg
+
+					inventoryItems.forEach((item, index) => {
+						const div = document.createElement("div"); // NIEUW: Gebruik item.name voor weergave
+						div.className = "inventory-item"; // NIEUW: Gebruik specifieke stijl zonder tekst
+						const imgSrc = item.image ? item.image.src : "";
+
+						// Zet de positie (of default naar 0,0 of een grid-achtige startpositie als het nieuw is)
+						// Als invX/invY nog niet bestaat, geven we het een plekje op basis van index (simpele grid fallback)
+						if (item.invX === undefined) {
+							item.invX = (index % 3) * 110 + 20;
+							item.invY = Math.floor(index / 3) * 110 + 20;
+						}
+
+						div.style.position = "absolute";
+						div.style.left = item.invX + "px";
+						div.style.top = item.invY + "px";
+
+						div.innerHTML = `<img src="${imgSrc}" alt="Item" title="Sleep naar de kamer">`;
+
+						// Event listener om items vanuit de inventaris te slepen
+						div.addEventListener("mousedown", (e) => {
+							// NIEUW: Breng item naar voorgrond
+							div.style.zIndex = ++highestInventoryZ;
+
+							// Update array volgorde zodat dit ook zo blijft bij her-renderen
+							const idx = inventoryItems.indexOf(item);
+							if (idx > -1) {
+								inventoryItems.push(inventoryItems.splice(idx, 1)[0]);
+							}
+
+							e.preventDefault();
+							if (e.button === 0) {
+								// Alleen linkermuisknop
+								// Start met verplaatsen BINNEN de inventaris
+								isRearrangingInventory = true;
+								activeInventoryItem = item;
+
+								// Bereken offset zodat het item niet verspringt onder de muis
+								const rect = div.getBoundingClientRect();
+								inventoryDragOffset = {
+									x: e.clientX - rect.left,
+									y: e.clientY - rect.top,
+								};
+
+								e.stopPropagation(); // Voorkom dat andere kliks (zoals op het menu zelf) afgaan
+							}
+						});
+
+						inventoryContent.appendChild(div);
+					});
+				}
+
+				const inventory = document.getElementById("inventory");
+				const inventoryBtn = document.getElementById("inventoryBtn");
+
+				inventoryBtn.addEventListener("click", () => {
+					inventory.style.display = inventory.style.display === "flex" ? "none" : "flex";
+					inventoryBtn.querySelector("img").src = inventory.style.display === "flex" ? "icons/inventory_active.png" : "icons/inventory.png";
+					renderInventoryItems(); // Update de inventaris wanneer deze wordt geopend
+				});
+
+				// Collision check
+				function isBlocked(x, y) {
+					// Player kan niet op object tile staan
+					return objects.some((o) => {
+						const w = o.flipped ? o.depth || 1 : o.width || 1;
+						const d = o.flipped ? o.width || 1 : o.depth || 1;
+						// Check of x,y binnen de bounding box van het object valt
+						return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+					});
+				}
+
+				// NIEUW: Check of een tegel bezet is door een item (exclusief het item dat we nu slepen)
+				function isItemOccupied(x, y) {
+					return items.some((item) => item !== draggedItem && Math.floor(item.x) === x && Math.floor(item.y) === y);
+				}
+
+				// Bouwmodus logica
+				const buildBtn = document.getElementById("buildBtn");
+				const buildMenu = document.getElementById("buildMenu");
+				const buildCategoryMenu = document.getElementById("buildCategoryMenu");
+				const buildMenuContent = document.getElementById("buildMenuContent");
+
+				const buildableObjects = [
+					// Admin/Template Objects
+					// subCategory: 'objects' (was blok)
+					{
+						name: "Blok",
+						height: 1,
+						image: objectImg.src,
+						category: "objecten",
+						subCategory: "objects",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Hoge Blok",
+						height: 2,
+						image: objectImg96.src,
+						category: "objecten",
+						subCategory: "objects",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Tafel",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: objectImg96B.src,
+						category: "objecten",
+						subCategory: "objects",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Pong",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: pongImg.src,
+						category: "objecten",
+						subCategory: "objects",
+						placement: "floor",
+						isTemplate: true,
+					},
+
+					// subCategory: 'moveable'
+					{
+						name: "Verplaatsbaar Blok",
+						height: 1,
+						image: moveableObjectImg.src,
+						category: "objecten",
+						subCategory: "moveable",
+						placement: "floor",
+						moveable: true,
+						isTemplate: true,
+					},
+					{
+						name: "Verplaatsbare Tafel",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: moveableObjectImg96B.src,
+						category: "objecten",
+						subCategory: "moveable",
+						placement: "floor",
+						moveable: true,
+						isTemplate: true,
+					},
+
+					// subCategory: 'shop'
+					{
+						name: "Winkel",
+						height: 2,
+						image: winkelImg.src,
+						category: "objecten",
+						subCategory: "shop",
+						placement: "floor",
+						isTemplate: true,
+					},
+
+					// subCategory: 'containers'
+					{
+						name: "Container",
+						height: 1,
+						image: containerImg.src,
+						category: "objecten",
+						subCategory: "containers",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Grote Container",
+						height: 2,
+						image: containerImg96.src,
+						category: "objecten",
+						subCategory: "containers",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Brede Container",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: containerImg96B.src,
+						category: "objecten",
+						subCategory: "containers",
+						placement: "floor",
+						isTemplate: true,
+					},
+
+					// subCategory: 'trash'
+					{
+						name: "Prullenbak",
+						height: 1,
+						image: trashImg.src,
+						category: "objecten",
+						subCategory: "trash",
+						placement: "floor",
+						isTemplate: true,
+					},
+					{
+						name: "Brede Prullenbak",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: trashImg96B.src,
+						category: "objecten",
+						subCategory: "trash",
+						placement: "floor",
+						isTemplate: true,
+					},
+
+					// subCategory: 'wall' (was muur)
+					{ name: "Muurdecoratie", image: wallItemImg.src, category: "objecten", subCategory: "wall", placement: "wall", isTemplate: true },
+
+					// Player Objects
+					{
+						name: "Pong",
+						height: 1,
+						width: 2,
+						depth: 1,
+						image: pongImg.src,
+						category: "objecten",
+						subCategory: "objects",
+						placement: "floor",
+					},
+					{ name: "Muurdecoratie", image: wallItemImg.src, category: "objecten", subCategory: "wall", placement: "wall" },
+				];
+
+				// ─────────────────────────────────────────────
+				// 💾 LOCALSTORAGE LOGICA (CUSTOM OBJECTS)
+				// ─────────────────────────────────────────────
+				const CUSTOM_OBJECTS_KEY = "habboCloneCustomObjects";
+
+				function saveCustomObjects() {
+					// Filter out only the custom objects that have been added at runtime
+					const customObjectsToSave = buildableObjects.filter((o) => o.isCustom);
+
+					// We only need to save the definition, not the live runtimeImage object
+					const serializableObjects = customObjectsToSave.map((o) => {
+						const { runtimeImage, ...serializable } = o; // Destructure to remove runtimeImage
+						return serializable;
+					});
+
+					localStorage.setItem(CUSTOM_OBJECTS_KEY, JSON.stringify(serializableObjects));
+				}
+
+				function loadCustomObjects() {
+					const savedObjectsJSON = localStorage.getItem(CUSTOM_OBJECTS_KEY);
+					if (savedObjectsJSON) {
+						try {
+							const loadedObjects = JSON.parse(savedObjectsJSON);
+							loadedObjects.forEach((obj) => {
+								const img = new Image();
+								img.src = obj.image; // The image is a base64 data URL
+								obj.runtimeImage = img;
+								buildableObjects.push(obj);
+							});
+						} catch (e) {
+							console.error("Failed to load custom objects from localStorage:", e);
+							localStorage.removeItem(CUSTOM_OBJECTS_KEY);
+						}
+					}
+				}
+				loadCustomObjects(); // Laad custom objecten uit localStorage bij het starten
+
+				function renderBuildItems() {
+					const moveToolBtn = document.getElementById("moveToolBtn");
+					const deleteToolBtn = document.getElementById("deleteToolBtn");
+					const adminDeleteToolBtn = document.getElementById("adminDeleteToolBtn");
+
+					buildMenuContent.innerHTML = ""; // Maak de lijst leeg
+					const itemsToShow = buildableObjects.filter((item) => {
+						const isTemplate = !!item.isTemplate; // Convert undefined to false
+						// Custom items tonen in zowel Admin als Player menu
+						const contextMatch = item.isCustom ? true : activeMenuContext === "admin" ? isTemplate : !isTemplate;
+						return contextMatch && item.category === activeBuildCategory && item.subCategory === activeObjectSubCategory;
+					});
+
+					itemsToShow.forEach((item) => {
+						const div = document.createElement("div");
+						div.className = "build-item";
+						div.innerHTML = `<img src="${item.image}" alt="${item.name}">${item.name}`;
+						div.onclick = () => {
+							// Als admin delete tool actief is, verwijder item uit menu
+							if (buildTool === "adminDelete") {
+								// Vraag om bevestiging, vooral voor custom items
+								if (confirm(`Weet je zeker dat je "${item.name}" permanent wilt verwijderen?`)) {
+									const idx = buildableObjects.indexOf(item);
+									if (idx > -1) {
+										buildableObjects.splice(idx, 1);
+
+										// VERWIJDER OOK ALLE GEPLAATSTE EXEMPLAREN
+										// Filter objects array (vloer objecten)
+										for (let i = objects.length - 1; i >= 0; i--) {
+											if (objects[i].name === item.name) {
+												objects.splice(i, 1);
+											}
+										}
+										// Filter wallObjects (muur objecten)
+										for (let i = wallObjects.length - 1; i >= 0; i--) {
+											if (wallObjects[i].name === item.name) {
+												wallObjects.splice(i, 1);
+											}
+										}
+
+										// Als het een custom object was, update localStorage
+										if (item.isCustom) {
+											saveCustomObjects();
+										}
+										renderBuildItems(); // Her-render de lijst
+									}
+								}
+								return;
+							}
+
+							// Activeer 'place' tool
+							setBuildTool("place");
+
+							// Deselecteer als het al geselecteerd was
+							if (selectedBuildObject && selectedBuildObject.name === item.name) {
+								selectedBuildObject = null;
+								div.classList.remove("selected");
+							} else {
+								// Deselecteer tools
+								moveToolBtn.classList.remove("selected");
+								deleteToolBtn.classList.remove("selected");
+								if (adminDeleteToolBtn) adminDeleteToolBtn.querySelector("img").src = "icons/delete.png";
+								// Deselecteer andere items
+								document.querySelectorAll(".build-item.selected").forEach((el) => el.classList.remove("selected"));
+								// Selecteer dit item
+								selectedBuildObject = item;
+								div.classList.add("selected");
+								isBuildObjectFlipped = false; // Reset flip state bij nieuwe selectie
+							}
+						};
+						buildMenuContent.appendChild(div);
+					});
+				}
+
+				function renderObjectSubCategories() {
+					const subCategoryMenu = document.getElementById("objectSubCategoryMenu");
+					subCategoryMenu.innerHTML = ""; // Leegmaken
+
+					// Verzamel unieke subcategorieën
+					const subCategories = [
+						...new Set(
+							buildableObjects
+								.filter((item) => {
+									const isTemplate = !!item.isTemplate;
+									// Laat subcategorieën zien als er items in zitten, ook custom items in player mode
+									const contextMatch = item.isCustom ? true : activeMenuContext === "admin" ? isTemplate : !isTemplate;
+									return contextMatch && item.category === "objecten";
+								})
+								.map((item) => item.subCategory)
+						),
+					];
+
+					// Maak voor elke subcategorie een knop
+					subCategories.forEach((subCat) => {
+						const btn = document.createElement("button");
+						btn.className = "category-btn"; // Gebruik dezelfde styling
+						if (subCat === activeObjectSubCategory) {
+							btn.classList.add("selected");
+						}
+						btn.dataset.subCategory = subCat;
+						btn.title = subCat.charAt(0).toUpperCase() + subCat.slice(1); // bv. 'Blok'
+						// Kies een icoon op basis van de subcategorie
+						const isActive = subCat === activeObjectSubCategory;
+						if (subCat === "objects") {
+							btn.innerHTML = `<img src="icons/object${isActive ? "_active" : ""}.png">`;
+						} else if (subCat === "wall") {
+							btn.innerHTML = `<img src="icons/wall${isActive ? "_active" : ""}.png">`;
+						} else {
+							// Fallback icoon voor nieuwe categorieën (moveable, shop, etc.)
+							// Je kunt hier specifieke iconen toevoegen zoals 'icons/shop.png' als je die hebt.
+							btn.innerHTML = `<img src="icons/object${isActive ? "_active" : ""}.png">`;
+						}
+
+						btn.onclick = () => {
+							activeObjectSubCategory = subCat;
+							renderObjectSubCategories(); // Her-render om selectie te tonen
+							renderBuildItems(); // Her-render de items in de grid
+						};
+						subCategoryMenu.appendChild(btn);
+					});
+				}
+
+				function setBuildTool(tool) {
+					buildTool = tool;
+					// Deselecteer meubel als we een andere tool kiezen
+					if (tool === "move" || tool === "delete" || tool === "adminDelete") {
+						selectedBuildObject = null;
+						document.querySelectorAll(".build-item.selected").forEach((el) => el.classList.remove("selected"));
+					}
+
+					// Annuleer altijd een 'move' actie als we een andere tool selecteren
+					if (movingObject) {
+						objects.push(movingObject); // Zet het object terug
+						movingObject = null;
+					}
+				}
+
+				moveToolBtn.addEventListener("click", () => {
+					const img = moveToolBtn.querySelector("img");
+					if (buildTool === "move") {
+						setBuildTool("place"); // Terug naar neutraal
+						img.src = "icons/place.png";
+					} else {
+						setBuildTool("move");
+						closeSecondaryWindows(); // Sluit andere vensters om conflicten te voorkomen
+						img.src = "icons/place_active.png";
+						deleteToolBtn.querySelector("img").src = "icons/trash.png"; // Reset delete
+						document.getElementById("adminDeleteToolBtn").querySelector("img").src = "icons/delete.png";
+					}
+				});
+
+				deleteToolBtn.addEventListener("click", () => {
+					const img = deleteToolBtn.querySelector("img");
+					setBuildTool(buildTool === "delete" ? "place" : "delete");
+					img.src = buildTool === "delete" ? "icons/trash_active.png" : "icons/trash.png";
+					moveToolBtn.querySelector("img").src = "icons/place.png"; // Reset move
+					document.getElementById("adminDeleteToolBtn").querySelector("img").src = "icons/delete.png";
+				});
+
+				const adminDeleteToolBtn = document.getElementById("adminDeleteToolBtn");
+				if (adminDeleteToolBtn) {
+					adminDeleteToolBtn.addEventListener("click", () => {
+						const img = adminDeleteToolBtn.querySelector("img");
+						setBuildTool(buildTool === "adminDelete" ? "place" : "adminDelete");
+						img.src = buildTool === "adminDelete" ? "icons/delete_active.png" : "icons/delete.png";
+						moveToolBtn.querySelector("img").src = "icons/place.png";
+						deleteToolBtn.querySelector("img").src = "icons/trash.png";
+					});
+				}
+
+				// --- Kruisjes om menu's te sluiten ---
+				document.getElementById("closeBuildMenuBtn").addEventListener("click", () => {
+					closeBuildAdminMenu();
+				});
+
+				document.getElementById("closeChatLogBtn").addEventListener("click", () => {
+					chatLog.style.display = "none";
+					document.querySelector("#openChatLog img").src = "icons/chat.png";
+				});
+
+				document.getElementById("closeInventoryBtn").addEventListener("click", () => {
+					inventory.style.display = "none";
+					document.querySelector("#inventoryBtn img").src = "icons/inventory.png";
+				});
+
+				buildCategoryMenu.addEventListener("click", (e) => {
+					const btn = e.target.closest(".category-btn");
+					if (btn) {
+						// Verwijder 'selected' van alle categorieknoppen
+						buildCategoryMenu.querySelectorAll(".category-btn").forEach((b) => {
+							b.classList.remove("selected");
+							// Reset iconen naar inactive
+							const img = b.querySelector("img");
+							if (img) {
+								if (b.dataset.category === "objecten") img.src = "icons/object.png";
+								if (b.dataset.category === "kleur") img.src = "icons/color.png";
+							}
+						});
+						// Deselecteer de losse tools
+						setBuildTool("place");
+
+						// Reset tool icons
+						document.querySelector("#moveToolBtn img").src = "icons/place.png";
+						document.querySelector("#deleteToolBtn img").src = "icons/trash.png";
+						document.querySelector("#adminDeleteToolBtn img").src = "icons/delete.png";
+
+						// Annuleer een eventuele 'move' actie
+						if (movingObject) {
+							objects.push(movingObject); // Zet het object terug
+							movingObject = null;
+						}
+
+						// Annuleer ook een 'place' actie (deselecteer object)
+						if (selectedBuildObject) {
+							selectedBuildObject = null;
+							document.querySelectorAll(".build-item.selected").forEach((el) => el.classList.remove("selected"));
+							isBuildObjectFlipped = false;
+						}
+
+						// Voeg 'selected' toe aan de geklikte knop
+						btn.classList.add("selected");
+						activeBuildCategory = btn.dataset.category;
+
+						// Set active icon
+						const activeImg = btn.querySelector("img");
+						if (activeImg) {
+							if (activeBuildCategory === "objecten") activeImg.src = "icons/object_active.png";
+							if (activeBuildCategory === "kleur") activeImg.src = "icons/color_active.png";
+						}
+
+						// Wissel de zichtbare content
+						document.getElementById("objectCategoryView").style.display = activeBuildCategory === "objecten" ? "flex" : "none";
+						document.getElementById("colorCategoryView").style.display = activeBuildCategory === "kleur" ? "flex" : "none";
+						document.getElementById("roomCategoryView").style.display = activeBuildCategory === "kamers" ? "block" : "none";
+
+						if (activeBuildCategory === "objecten") {
+							renderObjectSubCategories(); // Render de subcategorie-knoppen
+							renderBuildItems(); // Render de items voor de actieve subcategorie
+						}
+					}
+				});
+
+				// --- Logica voor Kleur-tools ---
+				const colorToolsContainer = document.getElementById("colorTools");
+				colorToolsContainer.addEventListener("click", (e) => {
+					const clickedButton = e.target.closest(".tool-btn");
+					if (!clickedButton) return;
+
+					// Update de geselecteerde tool
+					colorTool = clickedButton.dataset.tool;
+
+					// Update de visuele selectie
+					colorToolsContainer.querySelectorAll(".tool-btn").forEach((btn) => {
+						btn.classList.remove("selected");
+						// Reset icons
+						const img = btn.querySelector("img");
+						if (btn.dataset.tool === "brush") img.src = "icons/paint.png";
+						if (btn.dataset.tool === "bucket") img.src = "icons/fill.png";
+					});
+					clickedButton.classList.add("selected");
+					// Set active icon
+					const activeImg = clickedButton.querySelector("img");
+					if (colorTool === "brush") activeImg.src = "icons/paint_active.png";
+					if (colorTool === "bucket") activeImg.src = "icons/fill_active.png";
+				});
+
+				// --- iro.js Color Picker Initialisatie ---
+				const colorPicker = new iro.ColorPicker("#color-picker-container", {
+					width: 280, // Iets kleiner voor betere centrering
+					color: selectedColor,
+					borderWidth: 1,
+					borderColor: "#fff",
+					layout: [
+						{
+							component: iro.ui.Box, // Het vierkante kleurvlak
+						},
+						{
+							component: iro.ui.Slider, // De slider voor de kleurtint
+							options: { sliderType: "hue" },
+						},
+					],
+				});
+
+				// Update de 'selectedColor' variabele wanneer de kleur verandert
+				function updateColor(color, source) {
+					selectedColor = color.hexString;
+					document.getElementById("colorPreview").style.backgroundColor = selectedColor;
+
+					// Voorkom een oneindige loop door niet te updaten als de input de bron was
+					if (source !== "input") {
+						document.getElementById("hexInput").value = selectedColor;
+					}
+				}
+
+				colorPicker.on("color:change", (color) => updateColor(color, "picker"));
+
+				document.getElementById("hexInput").addEventListener("change", (e) => {
+					const hex = e.target.value;
+					// Simpele validatie voor een hex kleur
+					if (/^#([0-9A-F]{3}){1,2}$/i.test(hex)) {
+						colorPicker.color.hexString = hex;
+						// De 'color:change' event van de picker wordt automatisch getriggerd,
+						// dus we hoeven updateColor() hier niet expliciet aan te roepen.
+					}
+				});
+
+				const adminBtn = document.getElementById("adminBtn");
+				const buildMenuHeaderSpan = buildMenu.querySelector("#buildMenuHeader span");
+
+				function closeBuildAdminMenu() {
+					isBuildMode = false;
+					buildMenu.style.display = "none";
+
+					// Reset icons
+					buildBtn.querySelector("img").src = "icons/buildmenu.png";
+					adminBtn.querySelector("img").src = "icons/admin.png";
+
+					// Cleanup logic
+					selectedBuildObject = null;
+					document.querySelectorAll(".build-item.selected").forEach((el) => el.classList.remove("selected"));
+					isBuildObjectFlipped = false;
+					setBuildTool("place");
+					document.querySelector("#moveToolBtn img").src = "icons/place.png";
+					document.querySelector("#deleteToolBtn img").src = "icons/trash.png";
+					document.querySelector("#adminDeleteToolBtn img").src = "icons/delete.png";
+
+					// Reset to objecten categorie for the next time
+					const objBtn = document.querySelector('.category-btn[data-category="objecten"]'); // Default naar objects/blok
+					if (objBtn) objBtn.click();
+				}
+
+				function openBuildAdminMenu(context) {
+					// If we click the same button again while the menu is open, close it.
+					if (isBuildMode && activeMenuContext === context) {
+						closeBuildAdminMenu();
+						return;
+					}
+
+					isBuildMode = true;
+					activeMenuContext = context;
+					buildMenu.style.display = "flex";
+
+					// Update header text
+					buildMenuHeaderSpan.textContent = context === "admin" ? "Admin" : "Bouwmodus";
+
+					// Update button icons
+					buildBtn.querySelector("img").src = context === "player" ? "icons/buildmenu_active.png" : "icons/buildmenu.png";
+					adminBtn.querySelector("img").src = context === "admin" ? "icons/admin_active.png" : "icons/admin.png";
+
+					// Toon/verberg de kamers knop
+					const roomBtn = document.getElementById("adminRoomBtn");
+					if (roomBtn) {
+						roomBtn.style.display = context === "admin" ? "flex" : "none";
+					}
+
+					const adminDelBtn = document.getElementById("adminDeleteToolBtn");
+					if (adminDelBtn) {
+						adminDelBtn.style.display = context === "admin" ? "flex" : "none";
+					}
+
+					const uploadBtn = document.getElementById("uploadToolBtn");
+					if (uploadBtn) {
+						uploadBtn.style.display = context === "admin" ? "flex" : "none";
+					}
+
+					// Render content for the new context
+					// Reset subcategory to 'objects' (was blok) when opening menu to ensure valid state
+					activeObjectSubCategory = "objects";
+
+					const activeCatBtn = document.querySelector('.category-btn[data-category="objecten"]');
+					if (activeCatBtn) {
+						activeCatBtn.click(); // Trigger click to refresh view
+					}
+				}
+
+				buildBtn.addEventListener("click", () => openBuildAdminMenu("player"));
+				adminBtn.addEventListener("click", () => openBuildAdminMenu("admin"));
+
+				document.getElementById("createRoomBtn").addEventListener("click", () => {
+					const roomNameInput = document.getElementById("roomNameInput");
+					const roomName = roomNameInput.value.trim();
+					const selectedSizeRadio = document.querySelector('input[name="roomSize"]:checked');
+
+					if (!roomName) {
+						showNotification("Voer een naam in voor de kamer.");
+						return;
+					}
+					if (!selectedSizeRadio) {
+						showNotification("Selecteer een kamergrootte.");
+						return;
+					}
+
+					const selectedSize = selectedSizeRadio.value;
+					// Maak een URL-vriendelijke naam
+					const sanitizedName = roomName
+						.toLowerCase()
+						.replace(/\s+/g, "-")
+						.replace(/[^a-z0-9-]/g, "");
+
+					if (!sanitizedName) {
+						showNotification("De ingevoerde naam is ongeldig.");
+						return;
+					}
+
+					// Omdat we geen bestanden kunnen schrijven (browser security), gebruiken we URL parameters.
+					// Dit herlaadt de pagina met de nieuwe instellingen (naam en grootte).
+					window.location.search = `?room=${sanitizedName}&size=${selectedSize}`;
+				});
+
+				document.getElementById("exportLevelBtn").addEventListener("click", () => {
+					const levelData = {
+						mapW,
+						mapH,
+						objects,
+						wallObjects,
+						tileColors,
+						wallColors,
+					};
+					const json = JSON.stringify(levelData, null, 2);
+					document.getElementById("levelDataOutput").value = json;
+				});
+
+				document.getElementById("importLevelBtn").addEventListener("click", () => {
+					try {
+						const json = document.getElementById("levelDataOutput").value;
+						if (!json) return;
+						const data = JSON.parse(json);
+
+						if (data.mapW) mapW = data.mapW;
+						if (data.mapH) mapH = data.mapH;
+
+						if (data.objects) {
+							objects.length = 0;
+							data.objects.forEach((o) => objects.push(o));
+						}
+						if (data.wallObjects) {
+							wallObjects.length = 0;
+							data.wallObjects.forEach((o) => wallObjects.push(o));
+						}
+						if (data.tileColors) {
+							// Clear existing and copy new
+							for (const key in tileColors) delete tileColors[key];
+							Object.assign(tileColors, data.tileColors);
+						}
+						if (data.wallColors) {
+							for (const key in wallColors) delete wallColors[key];
+							Object.assign(wallColors, data.wallColors);
+						}
+
+						showNotification("Level ingeladen!");
+
+						// Sluit menu om resultaat te zien
+						// closeBuildAdminMenu();
+					} catch (e) {
+						alert("Fout bij importeren: " + e.message);
+					}
+				});
+
+				// ─────────────────────────────────────────────
+				// 📤 UPLOAD CUSTOM ITEM LOGICA
+				// ─────────────────────────────────────────────
+				const uploadToolBtn = document.getElementById("uploadToolBtn");
+				const uploadModal = document.getElementById("uploadModal");
+				const templateGrid = document.getElementById("templateGrid");
+				const customFileUpload = document.getElementById("customFileUpload");
+				const closeUploadModal = document.getElementById("closeUploadModal");
+				const closeUploadModalCross = document.getElementById("closeUploadModalCross");
+				let selectedTemplate = null;
+
+				if (uploadToolBtn) {
+					uploadToolBtn.addEventListener("click", () => {
+						uploadModal.style.display = "flex";
+						uploadToolBtn.querySelector("img").src = "icons/add_active.png";
+						templateGrid.innerHTML = "";
+
+						// Vind unieke templates in de huidige categorie/subcategorie
+						const currentTemplates = buildableObjects.filter(
+							(o) => o.category === activeBuildCategory && o.subCategory === activeObjectSubCategory && o.isTemplate
+						);
+
+						// Dedupliceer op basis van eigenschappen (niet plaatje)
+						const uniqueTemplates = [];
+						const seenProps = new Set();
+
+						currentTemplates.forEach((t) => {
+							// Maak een unieke key van de fysieke eigenschappen
+							const props = `${t.width || 1}-${t.height || 1}-${t.depth || 1}-${t.placement}-${t.moveable || false}-${t.subCategory}`;
+							if (!seenProps.has(props)) {
+								seenProps.add(props);
+								uniqueTemplates.push(t);
+							}
+						});
+
+						uniqueTemplates.forEach((t) => {
+							const div = document.createElement("div");
+							div.style.border = "1px solid #555";
+							div.style.padding = "5px";
+							div.style.cursor = "pointer";
+							div.style.textAlign = "center";
+							div.style.borderRadius = "4px";
+							div.style.background = "rgba(255,255,255,0.1)";
+							div.innerHTML = `<img src="${t.image}" style="width:32px;height:32px;object-fit:contain;image-rendering:pixelated;"><br><span style="font-size:10px;">${t.name}</span>`;
+							div.onclick = () => {
+								selectedTemplate = t;
+								customFileUpload.click();
+							};
+							templateGrid.appendChild(div);
+						});
+					});
+				}
+
+				if (closeUploadModal) {
+					closeUploadModal.addEventListener("click", () => {
+						uploadModal.style.display = "none";
+						if (uploadToolBtn) uploadToolBtn.querySelector("img").src = "icons/add.png";
+					});
+				}
+
+				if (closeUploadModalCross) {
+					closeUploadModalCross.addEventListener("click", () => {
+						uploadModal.style.display = "none";
+						if (uploadToolBtn) uploadToolBtn.querySelector("img").src = "icons/add.png";
+					});
+				}
+
+				if (customFileUpload) {
+					customFileUpload.addEventListener("change", (e) => {
+						const file = e.target.files[0];
+						if (!file) return;
+
+						// Lees de naam direct uit, voordat deze gereset wordt aan het einde van de functie
+						const nameInput = document.getElementById("customObjectName");
+						const enteredName = nameInput.value.trim();
+
+						const reader = new FileReader();
+						reader.onload = (event) => {
+							const imgData = event.target.result;
+							const img = new Image();
+							img.src = imgData;
+
+							const customName = enteredName || "Custom " + selectedTemplate.name;
+
+							// Maak nieuw object definitie
+							const newObj = {
+								...selectedTemplate,
+								name: customName,
+								image: imgData, // Dit is de base64 data URL
+								runtimeImage: img, // Voor canvas rendering
+								isTemplate: true, // Zodat hij in admin menu verschijnt
+								isCustom: true, // Markeer als custom object voor opslag
+							};
+
+							// Voeg toe aan lijst
+							buildableObjects.push(newObj);
+							// Sla de bijgewerkte lijst met custom objecten op
+							saveCustomObjects();
+
+							// Ververs menu
+							renderBuildItems();
+
+							// Sluit modal
+							uploadModal.style.display = "none";
+							if (uploadToolBtn) uploadToolBtn.querySelector("img").src = "icons/add.png";
+							showNotification("Custom object toegevoegd!");
+						};
+						reader.readAsDataURL(file);
+						customFileUpload.value = ""; // Reset
+						document.getElementById("customObjectName").value = ""; // Reset naam
+					});
+				}
+
+				// ─────────────────────────────────────────────
+				// 🏓 PONG MINIGAME LOGICA
+				// ─────────────────────────────────────────────
+				const pongCanvas = document.getElementById("pongCanvas");
+				const pongCtx = pongCanvas.getContext("2d");
+				const playerScoreEl = document.getElementById("playerScore");
+				const aiScoreEl = document.getElementById("aiScore");
+				let pongGameStarted = false; // NIEUW: Houdt bij of we voorbij het startscherm zijn
+				let pongRunning = false;
+				let isScoring = false; // NIEUW: Pauze na score
+				let pongAnimationId;
+
+				const pongBall = { x: 300, y: 132, vx: 3, vy: 3, size: 6 }; // Startpositie gecentreerd op 600x264
+				const paddleHeight = 60;
+				const paddleWidth = 10;
+				const playerPaddle = { x: 10, y: 120, score: 0 };
+				const aiPaddle = { x: 580, y: 120, score: 0 }; // Aangepast naar rechts (600 - 20)
+
+				function startPongGame() {
+					const pongGame = document.getElementById("pongGame");
+					pongGame.style.display = "flex";
+					resetPongBall();
+					playerPaddle.score = 0;
+					aiPaddle.score = 0;
+					playerScoreEl.textContent = "0";
+					aiScoreEl.textContent = "0";
+					pongGameStarted = false; // Wacht op spatie
+					pongRunning = false;
+					isScoring = false;
+					document.getElementById("pongBackdrop").style.display = "block";
+					updatePongCursorState(true); // Verberg cursor wel alvast
+					pongLoop();
+				}
+
+				function stopPongGame() {
+					const pongGame = document.getElementById("pongGame");
+					pongGame.style.display = "none";
+					document.getElementById("pongBackdrop").style.display = "none";
+					pongRunning = false;
+					updatePongCursorState(false);
+					cancelAnimationFrame(pongAnimationId);
+				}
+
+				document.getElementById("closePongBtn").addEventListener("click", stopPongGame);
+
+				window.addEventListener("mousemove", (e) => {
+					// Bestuur batje alleen als spel draait EN we niet het venster aan het slepen zijn
+					if (pongRunning && !isDraggingPong) {
+						const rect = pongCanvas.getBoundingClientRect();
+						const mouseY = e.clientY - rect.top;
+						playerPaddle.y = mouseY - paddleHeight / 2;
+
+						// Clamp paddle binnen canvas
+						if (playerPaddle.y < 0) playerPaddle.y = 0;
+						if (playerPaddle.y > pongCanvas.height - paddleHeight) playerPaddle.y = pongCanvas.height - paddleHeight;
+					}
+				});
+
+				function resetPongBall() {
+					pongBall.x = pongCanvas.width / 2;
+					pongBall.y = pongCanvas.height / 2;
+					pongBall.vx = (Math.random() > 0.5 ? 1 : -1) * (4 + Math.random() * 2); // Snelheid iets verlaagd
+					pongBall.vy = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2); // Snelheid iets verlaagd
+				}
+
+				function scorePause() {
+					isScoring = true;
+					resetPongBall();
+					setTimeout(() => {
+						isScoring = false;
+					}, 1000);
+				}
+
+				function updatePong() {
+					pongBall.x += pongBall.vx;
+					pongBall.y += pongBall.vy;
+
+					// Botsing boven/onder
+					if (pongBall.y < 0 || pongBall.y > pongCanvas.height) pongBall.vy = -pongBall.vy;
+
+					// AI Beweging (simpel volgen met vertraging)
+					const aiCenter = aiPaddle.y + paddleHeight / 2;
+					if (aiCenter < pongBall.y - 10) aiPaddle.y += 2.5; // Snelheid verlaagd van 3.5 naar 2.5
+					else if (aiCenter > pongBall.y + 10) aiPaddle.y -= 2.5;
+
+					// Clamp AI
+					if (aiPaddle.y < 0) aiPaddle.y = 0;
+					if (aiPaddle.y > pongCanvas.height - paddleHeight) aiPaddle.y = pongCanvas.height - paddleHeight;
+
+					// Botsing Speler Paddle
+					if (pongBall.x < playerPaddle.x + paddleWidth && pongBall.y > playerPaddle.y && pongBall.y < playerPaddle.y + paddleHeight) {
+						pongBall.vx = -pongBall.vx * 1.05; // Versnellen
+						pongBall.x = playerPaddle.x + paddleWidth;
+					}
+					// Botsing AI Paddle
+					if (pongBall.x > aiPaddle.x - pongBall.size && pongBall.y > aiPaddle.y && pongBall.y < aiPaddle.y + paddleHeight) {
+						pongBall.vx = -pongBall.vx * 1.05;
+						pongBall.x = aiPaddle.x - pongBall.size;
+					}
+
+					// Score
+					if (pongBall.x < 0) {
+						aiPaddle.score++;
+						aiScoreEl.textContent = aiPaddle.score;
+						scorePause();
+					} else if (pongBall.x > pongCanvas.width) {
+						playerPaddle.score++;
+						playerScoreEl.textContent = playerPaddle.score;
+						scorePause();
+					}
+				}
+
+				function drawPong() {
+					pongCtx.clearRect(0, 0, pongCanvas.width, pongCanvas.height); // Leegmaken voor transparantie
+
+					pongCtx.fillStyle = "white";
+					pongCtx.fillRect(playerPaddle.x, playerPaddle.y, paddleWidth, paddleHeight);
+					pongCtx.fillRect(aiPaddle.x, aiPaddle.y, paddleWidth, paddleHeight);
+
+					pongCtx.beginPath();
+					pongCtx.arc(pongBall.x, pongBall.y, pongBall.size, 0, Math.PI * 2);
+					pongCtx.fill();
+				}
+
+				function updatePongCursorState(isRunning) {
+					const val = isRunning ? "none" : "default";
+					document.body.style.cursor = val;
+					document.getElementById("pongGame").style.cursor = val;
+					// Header cursor: 'none' als we spelen, 'move' als we gepauzeerd zijn
+					document.getElementById("pongHeader").style.cursor = isRunning ? "none" : "move";
+					document.getElementById("pongCanvas").style.cursor = val;
+				}
+
+				function pongLoop() {
+					if (document.getElementById("pongGame").style.display === "none") return;
+
+					if (!pongGameStarted) {
+						// Startscherm tekenen
+						drawPong();
+						pongCtx.fillStyle = "rgba(0,0,0,0.5)";
+						pongCtx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+						pongCtx.fillStyle = "white";
+						pongCtx.font = "30px Arial";
+						pongCtx.textAlign = "center";
+						pongCtx.fillText("Druk op SPATIE om te starten", pongCanvas.width / 2, pongCanvas.height / 2);
+					} else if (pongRunning) {
+						if (!isScoring) updatePong(); // Alleen updaten als we niet in score-pauze zitten
+						drawPong();
+					} else {
+						// Als gepauzeerd: teken de game (statisch) en de overlay
+						drawPong();
+						pongCtx.fillStyle = "rgba(0,0,0,0.5)";
+						pongCtx.fillRect(0, 0, pongCanvas.width, pongCanvas.height);
+						pongCtx.fillStyle = "white";
+						pongCtx.font = "30px Arial";
+						pongCtx.textAlign = "center";
+						pongCtx.fillText("Gepauzeerd", pongCanvas.width / 2, pongCanvas.height / 2);
+						pongCtx.font = "16px Arial";
+						pongCtx.fillText("Druk op ESC om verder te gaan", pongCanvas.width / 2, pongCanvas.height / 2 + 30);
+					}
+
+					pongAnimationId = requestAnimationFrame(pongLoop);
+				}
+
+				function togglePongPause() {
+					const pongGame = document.getElementById("pongGame");
+					if (pongGame.style.display === "flex" && pongGameStarted) {
+						pongRunning = !pongRunning;
+						updatePongCursorState(pongRunning);
+					}
+				}
+
+				// Chat
+				const chatInput = document.getElementById("chatInput");
+				let chatMessages = [];
+				let allRoomMessages = [];
+
+				const chatLog = document.getElementById("chatLog");
+				const openChatLogBtn = document.getElementById("openChatLog");
+
+				openChatLogBtn.addEventListener("click", () => {
+					const img = openChatLogBtn.querySelector("img");
+					if (chatLog.style.display === "block") {
+						chatLog.style.display = "none";
+						img.src = "icons/chat.png";
+					} else {
+						chatLog.style.display = "block";
+						img.src = "icons/chat_active.png";
+						chatLog.scrollTop = chatLog.scrollHeight; // naar beneden scrollen
+					}
+				});
+
+				function sendChatMessage(text, user = "Jij") {
+					const now = Date.now();
+
+					const msg = {
+						text,
+						user,
+						time: now,
+						duration: 5000,
+						currentY: undefined,
+					};
+
+					chatMessages.push(msg);
+					allRoomMessages.push(msg);
+
+					updateChatLog();
+				}
+
+				function updateChatLog() {
+					const content = document.getElementById("chatLogContent");
+					content.innerHTML = "";
+
+					allRoomMessages.forEach((m) => {
+						const time = new Date(m.time).toLocaleTimeString("nl-NL", {
+							hour: "2-digit",
+							minute: "2-digit",
+						});
+
+						const line = document.createElement("div");
+						line.style.marginBottom = "6px";
+						line.style.wordBreak = "break-word";
+						line.innerHTML = `<span style="color:#888">[${time}]</span> <b>${m.user}:</b> ${m.text}`;
+
+						content.appendChild(line);
+					});
+
+					content.scrollTop = content.scrollHeight;
+				}
+
+				// Hulp functie: heuristiek (Manhattan afstand)
+				function heuristic(a, b) {
+					return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+				}
+
+				function findPath(start, end) {
+					const openSet = [];
+					const closedSet = new Set();
+					const cameFrom = new Map();
+
+					function nodeKey(n) {
+						return `${n.x},${n.y}`;
+					}
+
+					const gScore = {};
+					const fScore = {};
+
+					gScore[nodeKey(start)] = 0;
+					fScore[nodeKey(start)] = Math.abs(start.x - end.x) + Math.abs(start.y - end.y);
+
+					openSet.push({ ...start, f: fScore[nodeKey(start)] });
+
+					while (openSet.length > 0) {
+						// Kies node met laagste f
+						openSet.sort((a, b) => a.f - b.f);
+						const current = openSet.shift();
+
+						if (current.x === end.x && current.y === end.y) {
+							// Reconstruct path
+							const path = [];
+							let currKey = nodeKey(current);
+							while (cameFrom.has(currKey)) {
+								path.push(cameFrom.get(currKey));
+								currKey = nodeKey(cameFrom.get(currKey));
+							}
+							path.reverse();
+
+							// Voeg het eindpunt zelf toe zodat de speler er echt naartoe gaat
+							path.push({ x: end.x, y: end.y });
+
+							return path;
+						}
+
+						closedSet.add(nodeKey(current));
+
+						// buren inclusief diagonalen
+						const neighbors = [
+							{ x: current.x + 1, y: current.y },
+							{ x: current.x - 1, y: current.y },
+							{ x: current.x, y: current.y + 1 },
+							{ x: current.x, y: current.y - 1 },
+							{ x: current.x + 1, y: current.y + 1 },
+							{ x: current.x + 1, y: current.y - 1 },
+							{ x: current.x - 1, y: current.y + 1 },
+							{ x: current.x - 1, y: current.y - 1 },
+						].filter((n) => n.x >= 0 && n.x < mapW && n.y >= 0 && n.y < mapH);
+
+						for (let neighbor of neighbors) {
+							const nKey = nodeKey(neighbor);
+							if (closedSet.has(nKey)) continue;
+							if (isBlocked(neighbor.x, neighbor.y)) continue;
+
+							const tentativeG = gScore[nodeKey(current)] + 1;
+
+							if (!gScore.hasOwnProperty(nKey) || tentativeG < gScore[nKey]) {
+								cameFrom.set(nKey, { x: current.x, y: current.y });
+								gScore[nKey] = tentativeG;
+								fScore[nKey] = tentativeG + Math.abs(neighbor.x - end.x) + Math.abs(neighbor.y - end.y);
+								if (!openSet.some((n) => n.x === neighbor.x && n.y === neighbor.y)) {
+									openSet.push({ ...neighbor, f: fScore[nKey] });
+								}
+							}
+						}
+					}
+
+					// geen pad gevonden
+					return [];
+				}
+
+				// Tile naar scherm
+				function toScreen(ix, iy) {
+					const sx = ((ix - iy) * tileW) / 2;
+					const sy = ((ix + iy) * tileH) / 2;
+					return { sx, sy };
+				}
+
+				function toTile(mx, my) {
+					const cx = (mx - window.innerWidth / 2 - camX) / scale;
+					const cy = (my - window.innerHeight / 4 - camY) / scale;
+
+					const tyOffset = 1.5; // capsule is 1.5 tegel hoog
+					const tx = cx / tileW + cy / tileH;
+					const ty = cy / tileH - cx / tileW - tyOffset + 1; // +1 zodat onderkant op tegel
+					return { x: Math.floor(tx), y: Math.floor(ty) };
+				}
+
+				function toWorld(mx, my) {
+					// Converteert schermcoördinaten (muis) naar wereldcoördinaten (isometrisch)
+					const worldMouseX = (mx - window.innerWidth / 2 - camX) / scale;
+					const worldMouseY = (my - window.innerHeight / 4 - camY) / scale;
+
+					// Inverse transformatie van toScreen
+					const isoX = worldMouseX / (tileW / 2);
+					const isoY = worldMouseY / (tileH / 2);
+
+					const worldX = (isoX + isoY) / 2;
+					const worldY = (isoY - isoX) / 2;
+					return { x: worldX, y: worldY };
+				}
+
+				function wrapText(text, maxWidth) {
+					const words = text.split(" ");
+					const lines = [];
+					let line = "";
+
+					for (let word of words) {
+						// Check of het woord zelf al te breed is
+						if (ctx.measureText(word).width > maxWidth) {
+							// Eerst de huidige regel opslaan
+							if (line !== "") {
+								lines.push(line);
+								line = "";
+							}
+
+							// Breek het woord op
+							let part = "";
+							for (let char of word) {
+								const test = part + char;
+								if (ctx.measureText(test + "-").width > maxWidth) {
+									lines.push((part + "-").trim());
+									part = char;
+								} else {
+									part = test;
+								}
+							}
+							line = part; // Het resterende deel wordt de nieuwe regel
+						} else {
+							const testLine = line + word + " ";
+							if (ctx.measureText(testLine).width > maxWidth) {
+								// Voeg de vorige regel toe, maar alleen als deze niet leeg is
+								if (line.trim() !== "") lines.push(line.trim());
+								line = word + " ";
+							} else {
+								line = testLine;
+							}
+						}
+					}
+
+					// Voeg de allerlaatste regel toe, maar alleen als deze niet leeg is
+					if (line.trim() !== "") lines.push(line.trim());
+					return lines;
+				}
+
+				function drawTiles() {
+					for (let y = 0; y < mapH; y++) {
+						for (let x = 0; x < mapW; x++) {
+							const { sx, sy } = toScreen(x, y);
+							const tileKey = `${x},${y}`;
+
+							// Basis tegel
+							let fill = "#444";
+
+							// Check of er een custom kleur is voor deze tegel (dit overschrijft de basiskleur)
+							if (tileColors[tileKey]) {
+								fill = tileColors[tileKey];
+							}
+
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+							ctx.lineTo(sx, sy + tileH);
+							ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+							ctx.closePath();
+							ctx.fillStyle = fill;
+							ctx.fill();
+
+							// Tile nummer tekenen
+							ctx.save();
+							ctx.imageSmoothingEnabled = true; // Maak tekst tijdelijk glad
+							ctx.fillStyle = "white";
+							ctx.font = "10px Arial";
+							ctx.textAlign = "center";
+							ctx.textBaseline = "middle";
+							const tileNum = y * mapW + x; // nummer van 0 t/m mapW*mapH-1
+							ctx.fillText(tileNum, sx, sy + tileH / 2);
+							ctx.restore(); // Herstelt imageSmoothingEnabled naar de default (false)
+						}
+					}
+
+					// Teken het gehighlighte pad
+					if (highlightedPath.length > 0) {
+						ctx.fillStyle = "rgba(255, 255, 255, 0.5)"; // Wit met meer zichtbaarheid
+						highlightedPath.forEach((tile) => {
+							const { sx, sy } = toScreen(tile.x, tile.y);
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+							ctx.lineTo(sx, sy + tileH);
+							ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+							ctx.closePath();
+							ctx.fill();
+						});
+					}
+
+					// Hover-effect voor de kwast
+					if (isBuildMode && activeBuildCategory === "kleur" && hoverTarget) {
+						if (hoverTarget.type === "tile") {
+							const { sx, sy } = toScreen(hoverTarget.id.x, hoverTarget.id.y);
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+							ctx.lineTo(sx, sy + tileH);
+							ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+							ctx.closePath();
+							ctx.fillStyle = "rgba(255,255,255,0.5)";
+							ctx.fill();
+						} else if (hoverTarget.type === "wall") {
+							// Dit wordt afgehandeld in de drawWall functies
+						}
+					} else if (hoverCell) {
+						// Oude hover voor padvinden
+						const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
+						ctx.beginPath();
+						ctx.moveTo(sx, sy);
+						ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+						ctx.lineTo(sx, sy + tileH);
+						ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+						ctx.closePath();
+						ctx.fillStyle = "rgba(255,255,255,0.5)";
+						ctx.fill();
+					}
+
+					// Bouwmodus hover (plaatsen & verplaatsen)
+					if ((selectedBuildObject?.placement === "floor" || movingObject || draggedObject) && hoverCell) {
+						const obj = selectedBuildObject || movingObject || draggedObject;
+						const isFlipped = obj === selectedBuildObject ? isBuildObjectFlipped : obj.flipped || false;
+						const w = isFlipped ? obj.depth || 1 : obj.width || 1;
+						const d = isFlipped ? obj.width || 1 : obj.depth || 1;
+
+						// Check geldigheid voor ALLE tegels die het object zou bedekken
+						let isValidPlacement = true;
+						for (let dx = 0; dx < w; dx++) {
+							for (let dy = 0; dy < d; dy++) {
+								const tx = hoverCell.x + dx;
+								const ty = hoverCell.y + dy;
+								if (
+									tx >= mapW ||
+									ty >= mapH ||
+									isBlocked(tx, ty) ||
+									isItemOccupied(tx, ty) ||
+									(Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)
+								) {
+									isValidPlacement = false;
+								}
+
+								// Teken overlay voor elke tegel
+								const { sx, sy } = toScreen(tx, ty);
+								ctx.beginPath();
+								ctx.moveTo(sx, sy);
+								ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+								ctx.lineTo(sx, sy + tileH);
+								ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+								ctx.closePath();
+								ctx.fillStyle = isValidPlacement ? "rgba(0, 255, 0, 0.5)" : "rgba(255, 0, 0, 0.5)";
+								ctx.fill();
+							}
+						}
+
+						// De preview van het object zelf wordt nu in de renderList getekend voor correcte diepte.
+					} else if (selectedBuildObject?.placement === "wall" && hoverTarget?.type === "wall") {
+						// Preview voor muurobjecten
+						const wallId = hoverTarget.id;
+						const isOccupied = wallObjects.some((wo) => wo.wallId === wallId);
+						const isValidPlacement = !isOccupied;
+
+						// Teken de preview direct in de juiste wall-draw functie
+						// We voegen een tijdelijke vlag toe aan hoverTarget
+						hoverTarget.preview = {
+							color: isValidPlacement ? "rgba(0, 255, 0, 0.5)" : "rgba(255, 0, 0, 0.5)",
+							image: wallItemImg,
+							valid: isValidPlacement,
+						};
+					} else if (hoverTarget?.preview) {
+						// Reset de preview als we niet meer hoveren
+						delete hoverTarget.preview;
+					}
+
+					// Verwijder-modus hover
+					if ((buildTool === "delete" || buildTool === "adminDelete") && hoverCell) {
+						// Zoek object dat deze tegel bezet (rekening houdend met width/depth)
+						const objectOnTile = objects.find((o) => {
+							const w = o.flipped ? o.depth || 1 : o.width || 1;
+							const d = o.flipped ? o.width || 1 : o.depth || 1;
+							return hoverCell.x >= o.x && hoverCell.x < o.x + w && hoverCell.y >= o.y && hoverCell.y < o.y + d;
+						});
+
+						const itemOnTile = !objectOnTile
+							? items.find((item) => Math.floor(item.x) === hoverCell.x && Math.floor(item.y) === hoverCell.y)
+							: null;
+						if (objectOnTile || itemOnTile) {
+							const { sx, sy } = toScreen(hoverCell.x, hoverCell.y);
+
+							// Teken een rode overlay op de tegel
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(sx + tileW / 2, sy + tileH / 2);
+							ctx.lineTo(sx, sy + tileH);
+							ctx.lineTo(sx - tileW / 2, sy + tileH / 2);
+							ctx.closePath();
+							ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+							ctx.fill();
+						}
+					}
+				}
+
+				function drawBall() {
+					const { sx, sy } = toScreen(ball.x, ball.y); // x,y = midden van tegel horizontaal, y = midden van tegel
+
+					const capsuleWidth = 32;
+					const capsuleHeight = 48;
+					const radius = capsuleWidth / 2;
+
+					// Onderkant capsule = tegel midden
+					const drawY = sy - hopOffset - capsuleHeight;
+
+					// Capsule speler
+					ctx.fillStyle = "red";
+					ctx.beginPath();
+					ctx.moveTo(sx - capsuleWidth / 2, drawY + radius);
+					ctx.arcTo(sx - capsuleWidth / 2, drawY + capsuleHeight, sx + capsuleWidth / 2, drawY + capsuleHeight, radius);
+					ctx.arcTo(sx + capsuleWidth / 2, drawY + capsuleHeight, sx + capsuleWidth / 2, drawY, radius);
+					ctx.arcTo(sx + capsuleWidth / 2, drawY, sx - capsuleWidth / 2, drawY, radius);
+					ctx.arcTo(sx - capsuleWidth / 2, drawY, sx - capsuleWidth / 2, drawY + capsuleHeight, radius);
+					ctx.closePath();
+					ctx.fill();
+
+					// Hoed boven capsule
+					const hatWidth = 32;
+					const hatHeight = 16;
+					const capsuleTop = drawY;
+					ctx.fillStyle = "blue";
+					ctx.beginPath();
+					ctx.moveTo(sx, capsuleTop - hatHeight);
+					ctx.lineTo(sx - hatWidth / 2, capsuleTop);
+					ctx.lineTo(sx + hatWidth / 2, capsuleTop);
+					ctx.closePath();
+					ctx.fill();
+				}
+
+				// Achterwand
+				function drawTopWall() {
+					const wallHeight = 150;
+					// Loop van achter naar voren voor correcte diepte
+					for (let x = mapW - 1; x >= 0; x--) {
+						const wallId = `top_${x}`;
+						const topLeft = toScreen(x, 0);
+						const topRight = toScreen(x + 1, 0);
+
+						// Teken altijd eerst de basiskleur van de muur
+						ctx.fillStyle = wallColors[wallId] || "#555";
+						ctx.beginPath();
+						ctx.moveTo(topLeft.sx, topLeft.sy - wallHeight);
+						ctx.lineTo(topRight.sx, topRight.sy - wallHeight);
+						ctx.lineTo(topRight.sx, topRight.sy);
+						ctx.lineTo(topLeft.sx, topLeft.sy);
+						ctx.closePath();
+						ctx.fill();
+
+						// Teken de highlight eroverheen als de muis erboven is
+						if (hoverTarget && hoverTarget.type === "wall" && hoverTarget.id === wallId) {
+							ctx.fillStyle = "rgba(255,255,255,0.5)";
+							ctx.fill(); // Gebruik hetzelfde pad, dus vul opnieuw
+						}
+
+						// Teken een eventueel muurobject
+						const wallObject = wallObjects.find((wo) => wo.wallId === wallId);
+						if (wallObject) {
+							// Centreer het object op het muursegment
+							const objX = (topLeft.sx + topRight.sx) / 2;
+							const objY = topLeft.sy; // Bovenkant van de vloer (onderkant van de muur)
+
+							if (wallObject.flipped) {
+								ctx.save();
+								ctx.scale(-1, 1);
+								ctx.drawImage(wallItemImg, -objX - wallItemImg.width / 2, objY - wallItemImg.height + 16); // 16px omlaag
+								ctx.restore();
+							} else {
+								ctx.drawImage(wallItemImg, objX - wallItemImg.width / 2, objY - wallItemImg.height + 16); // 16px omlaag
+							}
+						}
+
+						// Teken de preview voor een nieuw muurobject
+						if (hoverTarget?.preview && hoverTarget.id === wallId) {
+							ctx.fillStyle = hoverTarget.preview.color;
+							ctx.fill();
+							// Teken nu ook de afbeelding van de preview
+							const objX = (topLeft.sx + topRight.sx) / 2;
+							const objY = topLeft.sy; // Bovenkant van de vloer (onderkant van de muur)
+							ctx.globalAlpha = 0.7; // Maak de preview transparant
+
+							if (isBuildObjectFlipped) {
+								ctx.save();
+								ctx.scale(-1, 1);
+								ctx.drawImage(
+									hoverTarget.preview.image,
+									-objX - hoverTarget.preview.image.width / 2,
+									objY - hoverTarget.preview.image.height + 16
+								); // 16px omlaag
+								ctx.restore();
+							} else {
+								ctx.drawImage(
+									hoverTarget.preview.image,
+									objX - hoverTarget.preview.image.width / 2,
+									objY - hoverTarget.preview.image.height + 16
+								); // 16px omlaag
+							}
+							ctx.globalAlpha = 1; // Reset alpha
+						}
+					}
+				}
+
+				// Linkermuur
+				function drawLeftWall() {
+					const wallHeight = 150;
+					// Loop van achter naar voren
+					for (let y = mapH - 1; y >= 0; y--) {
+						const wallId = `left_${y}`;
+						const leftTop = toScreen(0, y);
+						const leftBottom = toScreen(0, y + 1);
+
+						// Teken altijd eerst de basiskleur van de muur
+						ctx.fillStyle = wallColors[wallId] || "#666";
+						ctx.beginPath();
+						ctx.moveTo(leftTop.sx, leftTop.sy - wallHeight);
+						ctx.lineTo(leftBottom.sx, leftBottom.sy - wallHeight);
+						ctx.lineTo(leftBottom.sx, leftBottom.sy);
+						ctx.lineTo(leftTop.sx, leftTop.sy);
+						ctx.closePath();
+						ctx.fill();
+
+						// Teken de highlight eroverheen als de muis erboven is
+						if (hoverTarget && hoverTarget.type === "wall" && hoverTarget.id === wallId) {
+							ctx.fillStyle = "rgba(255,255,255,0.5)";
+							ctx.fill(); // Gebruik hetzelfde pad, dus vul opnieuw
+						}
+
+						// Teken een eventueel muurobject
+						const wallObject = wallObjects.find((wo) => wo.wallId === wallId);
+						if (wallObject) {
+							const objX = (leftTop.sx + leftBottom.sx) / 2; // Horizontaal midden van de muur
+							const objY = leftTop.sy; // Bovenkant van de vloer (onderkant van de muur)
+
+							if (wallObject.flipped) {
+								ctx.save();
+								ctx.scale(-1, 1);
+								ctx.drawImage(wallItemImg, -objX - wallItemImg.width / 2, objY - wallItemImg.height + 16); // 16px omlaag
+								ctx.restore();
+							} else {
+								ctx.drawImage(wallItemImg, objX - wallItemImg.width / 2, objY - wallItemImg.height + 16); // 16px omlaag
+							}
+						}
+
+						// Teken de preview voor een nieuw muurobject
+						if (hoverTarget?.preview && hoverTarget.id === wallId) {
+							ctx.fillStyle = hoverTarget.preview.color;
+							ctx.fill();
+							// Teken nu ook de afbeelding van de preview
+							const objX = (leftTop.sx + leftBottom.sx) / 2;
+							const objY = leftTop.sy; // Bovenkant van de vloer (onderkant van de muur)
+							ctx.globalAlpha = 0.7; // Maak de preview transparant
+							if (isBuildObjectFlipped) {
+								ctx.save();
+								ctx.scale(-1, 1);
+								ctx.drawImage(
+									hoverTarget.preview.image,
+									-objX - hoverTarget.preview.image.width / 2,
+									objY - hoverTarget.preview.image.height + 16
+								); // 16px omlaag
+								ctx.restore();
+							} else {
+								ctx.drawImage(
+									hoverTarget.preview.image,
+									objX - hoverTarget.preview.image.width / 2,
+									objY - hoverTarget.preview.image.height + 16
+								); // 16px omlaag
+							}
+							ctx.globalAlpha = 1; // Reset alpha
+						}
+					}
+				}
+
+				let lastTypingTime = 0;
+				const typingFadeStart = 3000; // 3 seconden wachten na laatste type
+				const typingFadeDuration = 1000; // fade tijd 1 seconde
+
+				function getActiveBalloonCount() {
+					const now = Date.now();
+					return chatMessages.filter((m) => now - m.time < m.duration).length;
+				}
+
+				chatInput.addEventListener("input", () => {
+					const activeCount = getActiveBalloonCount();
+
+					// ❌ blokkeren bij 5 ballonnen
+					if (activeCount >= 5) {
+						chatInput.value = "";
+						chatInput.disabled = true;
+						chatInput.placeholder = "Even wachten...";
+						charCounter.textContent = `0 / ${MAX_CHARS}`;
+						return;
+					}
+
+					// ✅ weer mogen typen
+					chatInput.disabled = false;
+					chatInput.placeholder = "Typ hier je bericht...";
+					chatInput.style.color = "#000";
+
+					lastTypingTime = Date.now();
+
+					if (chatInput.value.length > MAX_CHARS) {
+						chatInput.value = chatInput.value.slice(0, MAX_CHARS);
+					}
+
+					// Update char counter
+					charCounter.textContent = `${chatInput.value.length} / ${MAX_CHARS}`;
+					charCounter.style.color = chatInput.value.length >= MAX_CHARS ? "#ff4d4d" : "#aaa";
+				});
+
+				// Zorg dat het canvas meeschaalt met het venster
+				window.addEventListener("resize", () => {
+					const dpr = window.devicePixelRatio || 1;
+					canvas.width = window.innerWidth * dpr;
+					canvas.height = window.innerHeight * dpr;
+					canvas.style.width = window.innerWidth + "px";
+					canvas.style.height = window.innerHeight + "px";
+					ctx.imageSmoothingEnabled = false; // Opnieuw instellen na resize
+				});
+
+				window.addEventListener("keydown", (e) => {
+					const active = document.activeElement;
+
+					// Pong pauze toggle met ESC
+					if (e.key === "Escape") {
+						togglePongPause();
+
+						// Cancel bouwacties
+						if (isBuildMode) {
+							if (selectedBuildObject) {
+								selectedBuildObject = null;
+								const selectedItem = document.querySelector(".build-item.selected");
+								if (selectedItem) {
+									selectedItem.classList.remove("selected");
+									isBuildObjectFlipped = false;
+								}
+							}
+							if (movingObject) {
+								objects.push(movingObject); // Zet het object terug
+								movingObject = null;
+							}
+						}
+
+						// Cancel item dragging
+						if (isItemDragging && draggedItem) {
+							if (dragImageElement) {
+								dragImageElement.remove();
+								dragImageElement = null;
+							}
+
+							if (isDraggingFromInventory) {
+								inventoryItems.push(draggedItem);
+								renderInventoryItems();
+							} else if (isDraggingFromShop) {
+								shopOutputItems.push(draggedItem);
+								renderShopOutput();
+							} else {
+								if (draggedItemOriginalPos) {
+									draggedItem.x = draggedItemOriginalPos.x;
+									draggedItem.y = draggedItemOriginalPos.y;
+									items.push(draggedItem); // Zet item terug
+								}
+							}
+							isItemDragging = false;
+							isDraggingFromInventory = false;
+							isDraggingFromShop = false;
+							draggedItem = null;
+							draggedItemOriginalPos = null;
+
+							// Heropen de vensters die open stonden
+							if (windowStatesBeforeDrag) {
+								if (windowStatesBeforeDrag.chat) document.getElementById("chatLog").style.display = windowStatesBeforeDrag.chat;
+								if (windowStatesBeforeDrag.inventory) document.getElementById("inventory").style.display = windowStatesBeforeDrag.inventory;
+								if (windowStatesBeforeDrag.build === "flex") {
+									buildBtn.click();
+								}
+								if (windowStatesBeforeDrag.shop === "flex") {
+									document.getElementById("shopWindow").style.display = "flex";
+								}
+								if (windowStatesBeforeDrag.container === "flex") {
+									document.getElementById("containerWindow").style.display = "flex";
+								}
+								windowStatesBeforeDrag = null;
+							}
+						}
+
+						// Cancel object dragging (moveable objects)
+						if (isObjectDragging && draggedObject) {
+							draggedObject.x = draggedObjectOriginalPos.x;
+							draggedObject.y = draggedObjectOriginalPos.y;
+							objects.push(draggedObject);
+							draggedObject = null;
+							draggedObjectOriginalPos = null;
+							isObjectDragging = false;
+
+							if (camOriginalPos) {
+								camTargetX = camOriginalPos.x;
+								camTargetY = camOriginalPos.y;
+								camSmooth = true;
+								camOriginalPos = null;
+							}
+
+							if (windowStatesBeforeDrag) {
+								if (windowStatesBeforeDrag.chat) document.getElementById("chatLog").style.display = windowStatesBeforeDrag.chat;
+								if (windowStatesBeforeDrag.inventory) document.getElementById("inventory").style.display = windowStatesBeforeDrag.inventory;
+								if (windowStatesBeforeDrag.build === "flex") {
+									if (!isBuildMode) buildBtn.click();
+								}
+								if (windowStatesBeforeDrag.shop === "flex") {
+									document.getElementById("shopWindow").style.display = "flex";
+								}
+								if (windowStatesBeforeDrag.container === "flex") {
+									document.getElementById("containerWindow").style.display = "flex";
+								}
+								windowStatesBeforeDrag = null;
+							}
+						}
+					}
+
+					// Pong start met Spatie
+					if (e.code === "Space") {
+						if (document.getElementById("pongGame").style.display === "flex" && !pongGameStarted) {
+							pongGameStarted = true;
+							pongRunning = true;
+							e.preventDefault(); // Voorkom typen in chat
+							return;
+						}
+					}
+
+					// Als we in bouwmodus zijn, handel alleen de rotatie af.
+					if (isBuildMode && activeBuildCategory === "objecten" && (selectedBuildObject || movingObject)) {
+						if (e.key.toLowerCase() === "r") {
+							isBuildObjectFlipped = !isBuildObjectFlipped;
+							// Als we een object verplaatsen, update ook de 'flipped' state van dat object direct.
+							if (movingObject) {
+								movingObject.flipped = isBuildObjectFlipped;
+							}
+						}
+						return; // Stop verdere keyboard-logica in bouwmodus
+					}
+
+					// Als we een moveable object aan het slepen zijn (buiten bouwmodus)
+					if (isObjectDragging && draggedObject) {
+						if (e.key.toLowerCase() === "r") {
+							draggedObject.flipped = !draggedObject.flipped;
+							e.preventDefault(); // Voorkom dat 'r' in de chat komt
+						}
+						return; // Stop verdere afhandeling (geen chat focus)
+					}
+
+					// ❌ Geen bouwmodus: focus de chat, maar sluit speciale toetsen uit
+					if (
+						active !== chatInput &&
+						active.tagName !== "INPUT" &&
+						active.id !== "customObjectName" &&
+						active.tagName !== "TEXTAREA" &&
+						!["Shift", "Control", "Alt", "Meta", "Enter"].includes(e.key)
+					) {
+						chatInput.focus();
+					}
+
+					// Enter = bericht versturen
+					if (active === chatInput && e.key === "Enter") {
+						if (chatInput.value.trim() !== "") {
+							sendChatMessage(chatInput.value.trim());
+							chatInput.value = "";
+							charCounter.textContent = `0 / ${MAX_CHARS}`;
+							charCounter.style.color = "#aaa";
+						}
+						e.preventDefault();
+					}
+				});
+
+				function drawChatBallon() {
+					const now = Date.now();
+
+					const paddingX = 16;
+					const paddingY = 12;
+					const maxWidth = 200;
+					const minWidth = 60;
+					const lineHeight = 18;
+					const gap = 18;
+					const fadeTime = 1000;
+					const offsetAbovePlayer = 96;
+
+					const world = toScreen(ball.x, ball.y);
+					const screenX = world.sx * scale + window.innerWidth / 2 + camX;
+					const screenY = world.sy * scale + window.innerHeight / 4 + camY - hopOffset * scale;
+
+					// ─────────────────────────────────────────────
+					// 1️⃣ actieve chatberichten
+					// ─────────────────────────────────────────────
+					const activeMessages = chatMessages.filter((m) => now - m.time < m.duration);
+
+					// ─────────────────────────────────────────────
+					// 2️⃣ typing indicator als "virtueel bericht"
+					// ─────────────────────────────────────────────
+					const timeSinceLastType = now - lastTypingTime;
+					const typingActive = lastTypingTime > 0 && chatInput.value.length > 0 && timeSinceLastType < typingFadeStart + typingFadeDuration;
+
+					const virtualMessages = [];
+
+					if (typingActive) {
+						virtualMessages.push({
+							text: "...",
+							isTyping: true,
+							time: lastTypingTime,
+						});
+					}
+
+					// berichten + typing samenvoegen
+					const stack = [...activeMessages, ...virtualMessages];
+
+					// ─────────────────────────────────────────────
+					// 3️⃣ offsets berekenen (alles duwt elkaar omhoog)
+					// ─────────────────────────────────────────────
+					let offsets = [];
+					let totalOffset = 0;
+
+					for (let i = stack.length - 1; i >= 0; i--) {
+						const lines = wrapText(stack[i].text, maxWidth - paddingX * 2);
+						const height = lines.length * lineHeight + paddingY * 2;
+						offsets[i] = totalOffset;
+						totalOffset += height + gap;
+					}
+
+					ctx.save();
+					ctx.imageSmoothingEnabled = true; // Maak de tekstballon en tekst glad (UI element)
+					ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Schaal UI mee met DPI
+					ctx.font = "14px Arial";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+
+					function drawSingleBalloon(lines, offset, alpha = 1) {
+						const textWidth = Math.max(...lines.map((l) => ctx.measureText(l).width));
+
+						const width = Math.max(minWidth, Math.min(maxWidth, textWidth + paddingX * 2));
+
+						const height = lines.length * lineHeight + paddingY * 2;
+						const targetY = screenY - offsetAbovePlayer - offset - height;
+
+						const r = lines.length === 1 ? height / 2 : 14;
+
+						ctx.globalAlpha = alpha;
+
+						ctx.beginPath();
+						ctx.moveTo(screenX - width / 2 + r, targetY);
+						ctx.lineTo(screenX + width / 2 - r, targetY);
+						ctx.quadraticCurveTo(screenX + width / 2, targetY, screenX + width / 2, targetY + r);
+						ctx.lineTo(screenX + width / 2, targetY + height - r);
+						ctx.quadraticCurveTo(screenX + width / 2, targetY + height, screenX + width / 2 - r, targetY + height);
+						ctx.lineTo(screenX - width / 2 + r, targetY + height);
+						ctx.quadraticCurveTo(screenX - width / 2, targetY + height, screenX - width / 2, targetY + height - r);
+						ctx.lineTo(screenX - width / 2, targetY + r);
+						ctx.quadraticCurveTo(screenX - width / 2, targetY, screenX - width / 2 + r, targetY);
+						ctx.closePath();
+
+						ctx.fillStyle = "white";
+						ctx.fill();
+
+						lines.forEach((line, i) => {
+							ctx.fillStyle = "black";
+							ctx.fillText(line, screenX, targetY + paddingY + lineHeight / 2 + i * lineHeight);
+						});
+
+						ctx.globalAlpha = 1;
+					}
+
+					// ─────────────────────────────────────────────
+					// 4️⃣ alles tekenen
+					// ─────────────────────────────────────────────
+					stack.forEach((m, i) => {
+						let alpha = 1;
+
+						if (!m.isTyping) {
+							const age = now - m.time;
+							if (age > m.duration - fadeTime) {
+								alpha = 1 - (age - (m.duration - fadeTime)) / fadeTime;
+							}
+						} else {
+							if (timeSinceLastType > typingFadeStart) {
+								alpha = 1 - (timeSinceLastType - typingFadeStart) / typingFadeDuration;
+							}
+						}
+
+						const lines = wrapText(m.text, maxWidth - paddingX * 2);
+
+						drawSingleBalloon(lines, offsets[i], alpha);
+					});
+
+					ctx.restore();
+				}
+
+				function drawInteractionPrompts() {
+					activeInteractionButton = null; // Reset elke frame
+					const playerX = Math.floor(ball.x);
+					const playerY = Math.floor(ball.y);
+
+					objects.forEach((obj) => {
+						if (obj.name === "Pong" || obj.name === "Winkel" || obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
+							const isFlipped = obj.flipped;
+							const w = isFlipped ? obj.depth || 1 : obj.width || 1; // Pong=2x1, Winkel=1x1 (maar hoog)
+							const d = isFlipped ? obj.width || 1 : obj.depth || 1;
+
+							let spots = [];
+
+							if (obj.name === "Winkel") {
+								// Winkel heeft maar 1 interactiekant (voorkant)
+								if (isFlipped) {
+									spots.push({ x: obj.x, y: obj.y + 1 }); // Links-onder (y+1)
+								} else {
+									spots.push({ x: obj.x + 1, y: obj.y }); // Rechts-onder (x+1)
+								}
+							} else if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
+								if (obj.name === "Brede Container" || obj.name === "Brede Prullenbak") {
+									// Speciale logica voor de brede container: interactie aan de 'voorkant' (onder/rechts)
+									if (isFlipped) {
+										// Verticale oriëntatie -> Interactie rechts (x+w)
+										for (let i = 0; i < d; i++) {
+											spots.push({ x: obj.x + w, y: obj.y + i });
+										}
+									} else {
+										// Horizontale oriëntatie -> Interactie onder (y+d)
+										for (let i = 0; i < w; i++) {
+											spots.push({ x: obj.x + i, y: obj.y + d });
+										}
+									}
+								} else {
+									// Standaard logica voor andere containers (zoals het was)
+									if (isFlipped) {
+										spots.push({ x: obj.x, y: obj.y + 1 }); // Onder
+									} else {
+										spots.push({ x: obj.x + 1, y: obj.y }); // Rechts
+									}
+								}
+							} else {
+								// Pong heeft 2 kanten
+								if (isFlipped) {
+									// Verticaal: plekken boven en onder
+									spots.push({ x: obj.x, y: obj.y - 1 });
+									spots.push({ x: obj.x, y: obj.y + d });
+								} else {
+									// Horizontaal: plekken links en rechts
+									spots.push({ x: obj.x - 1, y: obj.y });
+									spots.push({ x: obj.x + w, y: obj.y });
+								}
+							}
+
+							const isPlayerOnSpot = spots.some((s) => s.x === playerX && s.y === playerY);
+
+							if (isPlayerOnSpot) {
+								// Teken prompt
+								const { sx, sy } = toScreen(ball.x, ball.y);
+								const drawX = sx * scale + window.innerWidth / 2 + camX;
+								const drawY = (sy - 80) * scale + window.innerHeight / 4 + camY - hopOffset * scale; // Boven speler
+
+								ctx.save();
+								ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // Reset transform voor UI, schaal mee met DPR
+
+								// Teken pong prompt
+								let promptImg = pongPromptImg;
+								if (obj.name === "Winkel") {
+									promptImg = shopPromptImg;
+								} else if (obj.name.includes("Prullenbak")) {
+									promptImg = trashPromptImg;
+								} else if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
+									promptImg = containerPromptImg;
+								}
+								const imgW = promptImg.width || 32;
+								const imgH = promptImg.height || 32;
+
+								const time = Date.now();
+
+								if (obj.name.includes("Container") || obj.name.includes("Prullenbak")) {
+									// Animatie: zacht sprongetje (bounce)
+									const bounce = Math.abs(Math.sin(time / 300)) * 8; // Springt 8px omhoog
+									ctx.translate(drawX, drawY - bounce);
+								} else {
+									// Animatie: zachtjes wiebelen (rotatie)
+									const angle = Math.sin(time / 200) * 0.2; // +/- 0.2 radialen
+									ctx.translate(drawX, drawY); // Verplaats naar midden van prompt
+									ctx.rotate(angle);
+								}
+
+								// Schaduw voor betere zichtbaarheid
+								ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+								ctx.shadowBlur = 10;
+								ctx.shadowOffsetX = 0;
+								ctx.shadowOffsetY = 0;
+								ctx.drawImage(promptImg, -imgW / 2, -imgH / 2);
+
+								// Sla op voor click detectie
+								activeInteractionButton = { x: drawX - imgW / 2, y: drawY - imgH / 2, w: imgW, h: imgH, obj: obj };
+
+								ctx.restore();
+							}
+						}
+					});
+				}
+
+				let mousePos = { x: 0, y: 0 };
+				// Event listeners
+				canvas.addEventListener("mousemove", (e) => {
+					// Blokkeer hover-effecten in de hoofdkamer als Pong actief is
+					if (pongRunning) return;
+
+					mousePos = { x: e.clientX, y: e.clientY };
+
+					const { x, y } = toTile(e.clientX, e.clientY);
+					hoverCell = x >= 0 && x < mapW && y >= 0 && y < mapH ? { x, y } : null;
+
+					// --- Hover detectie voor muren en tegels in bouwmodus ---
+					if (isBuildMode) {
+						hoverTarget = null;
+						const wallHeight = 150;
+						const mouseWorldX = (e.clientX - (window.innerWidth / 2 + camX)) / scale;
+						const mouseWorldY = (e.clientY - (window.innerHeight / 4 + camY)) / scale;
+
+						// Check top walls (van voor naar achter voor correcte selectie)
+						for (let x = 0; x < mapW; x++) {
+							const p1 = toScreen(x, 0);
+							const p2 = toScreen(x + 1, 0);
+							// Bounding box van het muursegment
+							// We gebruiken een iets complexere check voor de isometrische vorm
+							const inside = isInside(mouseWorldX, mouseWorldY, [
+								p1,
+								p2,
+								{ sx: p2.sx, sy: p2.sy - wallHeight },
+								{ sx: p1.sx, sy: p1.sy - wallHeight },
+							]);
+							if (inside) {
+								hoverTarget = { type: "wall", id: `top_${x}` };
+								break;
+							}
+						}
+
+						// Als geen top-muur, check linker muren
+						if (!hoverTarget) {
+							for (let y = 0; y < mapH; y++) {
+								const p1 = toScreen(0, y);
+								const p2 = toScreen(0, y + 1);
+								// Bounding box van het muursegment
+								const inside = isInside(mouseWorldX, mouseWorldY, [
+									p1,
+									p2,
+									{ sx: p2.sx, sy: p2.sy - wallHeight },
+									{ sx: p1.sx, sy: p1.sy - wallHeight },
+								]);
+								if (inside) {
+									hoverTarget = { type: "wall", id: `left_${y}` };
+									break;
+								}
+							}
+						}
+
+						// Als nog steeds geen muur, check voor een tegel
+						if (!hoverTarget && hoverCell) {
+							hoverTarget = { type: "tile", id: hoverCell };
+						}
+					}
+
+					if (isCameraDragging) {
+						// Gebruik de nieuwe variabele
+						// Als we een object slepen, beweegt de camera niet handmatig mee.
+						// De camera volgt de muis via de `loop` functie.
+						// Deze check is niet meer nodig hier, omdat isCameraDragging en draggedObject elkaar uitsluiten.
+						// if (draggedObject) return;
+
+						const dx = e.clientX - dragStart.x;
+						const dy = e.clientY - dragStart.y;
+
+						camX = camStart.x + dx;
+						camY = camStart.y + dy;
+					}
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					// --- Logica voor verplaatsen BINNEN inventaris ---
+					if (isRearrangingInventory && activeInventoryItem) {
+						const inventory = document.getElementById("inventory");
+						const rect = inventory.getBoundingClientRect();
+
+						// Check of we over de container zijn (voor drag-drop naar container)
+						const containerWindow = document.getElementById("containerWindow");
+						let isOverContainer = false;
+						if (containerWindow && containerWindow.style.display === "flex") {
+							const cRect = containerWindow.getBoundingClientRect();
+							if (e.clientX >= cRect.left && e.clientX <= cRect.right && e.clientY >= cRect.top && e.clientY <= cRect.bottom) {
+								isOverContainer = true;
+							}
+						}
+
+						// Check of de muis BUITEN de inventaris komt -> Switch naar wereld-sleep
+						if (isOverContainer || e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+							isRearrangingInventory = false;
+
+							// Verwijder uit inventaris array
+							const index = inventoryItems.indexOf(activeInventoryItem);
+							if (index > -1) inventoryItems.splice(index, 1);
+							renderInventoryItems(); // Update UI (item verdwijnt uit lijst)
+
+							// Start de wereld-sleep logica
+							draggedItem = activeInventoryItem;
+							isItemDragging = true;
+							isDraggingFromInventory = true;
+							draggedItemOriginalPos = null;
+
+							// Maak het sleep-plaatje aan
+							dragImageElement = document.createElement("img");
+							dragImageElement.src = draggedItem.image.src;
+							dragImageElement.style.position = "absolute";
+							dragImageElement.style.pointerEvents = "none";
+							dragImageElement.style.zIndex = "9999";
+							dragImageElement.style.imageRendering = "pixelated";
+							const w = (draggedItem.image.width || 64) * scale;
+							const h = (draggedItem.image.height || 64) * scale;
+							dragImageElement.style.width = w + "px";
+							dragImageElement.style.left = e.clientX - w / 2 + "px";
+							dragImageElement.style.top = e.clientY - h / 2 + "px";
+							document.body.appendChild(dragImageElement);
+
+							activeInventoryItem = null;
+							return;
+						}
+
+						// Zolang we BINNEN de inventaris zijn: update positie
+						const contentRect = document.getElementById("inventoryContent").getBoundingClientRect();
+						activeInventoryItem.invX = e.clientX - contentRect.left - inventoryDragOffset.x;
+						activeInventoryItem.invY = e.clientY - contentRect.top - inventoryDragOffset.y;
+						renderInventoryItems(); // Herteken de items op nieuwe posities
+					}
+
+					// Update draggedItem position if dragging (Global to allow dragging over inventory)
+					if (isItemDragging && draggedItem) {
+						const worldPos = toWorld(e.clientX, e.clientY);
+						draggedItem.x = worldPos.x;
+						draggedItem.y = worldPos.y;
+
+						if (dragImageElement) {
+							const w = (draggedItem.image.width || 64) * scale;
+							const h = (draggedItem.image.height || 64) * scale;
+							dragImageElement.style.width = w + "px";
+							dragImageElement.style.left = e.clientX - w / 2 + "px";
+							dragImageElement.style.top = e.clientY - h / 2 + "px";
+						}
+					}
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					// --- Logica voor verplaatsen BINNEN container ---
+					if (isRearrangingContainer && activeContainerItem) {
+						const containerWindow = document.getElementById("containerWindow");
+						const rect = containerWindow.getBoundingClientRect();
+
+						// Check of de muis BUITEN de container komt -> Switch naar wereld-sleep
+						if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+							isRearrangingContainer = false;
+
+							// Verwijder uit container items array
+							const index = openContainer.items.indexOf(activeContainerItem);
+							if (index > -1) openContainer.items.splice(index, 1);
+							renderContainerItems();
+
+							// Start de wereld-sleep logica
+							draggedItem = activeContainerItem;
+							isItemDragging = true;
+							isDraggingFromContainer = true;
+							isDraggingFromInventory = false;
+							isDraggingFromShop = false;
+							draggedItemOriginalPos = null;
+
+							// Maak het sleep-plaatje aan
+							dragImageElement = document.createElement("img");
+							dragImageElement.src = draggedItem.image.src;
+							dragImageElement.style.position = "absolute";
+							dragImageElement.style.pointerEvents = "none";
+							dragImageElement.style.zIndex = "9999";
+							dragImageElement.style.imageRendering = "pixelated";
+							const w = (draggedItem.image.width || 64) * scale;
+							const h = (draggedItem.image.height || 64) * scale;
+							dragImageElement.style.width = w + "px";
+							dragImageElement.style.left = e.clientX - w / 2 + "px";
+							dragImageElement.style.top = e.clientY - h / 2 + "px";
+							document.body.appendChild(dragImageElement);
+
+							activeContainerItem = null;
+							return;
+						}
+
+						// Zolang we BINNEN de container zijn: update positie
+						const contentRect = document.getElementById("containerContent").getBoundingClientRect();
+						activeContainerItem.conX = e.clientX - contentRect.left - containerDragOffset.x;
+						activeContainerItem.conY = e.clientY - contentRect.top - containerDragOffset.y;
+						renderContainerItems();
+					}
+				});
+
+				// Helper functie om te checken of een punt in een polygoon (de muur) ligt
+				function isInside(x, y, vs) {
+					// ray-casting algorithm
+					let inside = false;
+					for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+						const xi = vs[i].sx,
+							yi = vs[i].sy;
+						const xj = vs[j].sx,
+							yj = vs[j].sy;
+
+						const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+						if (intersect) inside = !inside;
+					}
+					return inside;
+				}
+
+				canvas.addEventListener("mousedown", (e) => {
+					e.preventDefault(); // Voorkom dat de browser de canvas als afbeelding probeert te slepen (ghost image)
+
+					// NIEUW: Check of we op een interactie-knop klikken (zoals het batje)
+					if (activeInteractionButton && e.button === 0) {
+						const mx = e.clientX;
+						const my = e.clientY;
+						if (
+							mx >= activeInteractionButton.x &&
+							mx <= activeInteractionButton.x + activeInteractionButton.w &&
+							my >= activeInteractionButton.y &&
+							my <= activeInteractionButton.y + activeInteractionButton.h
+						) {
+							if (activeInteractionButton.obj.name === "Pong") {
+								// Check of speler een batje heeft
+								const hasPaddle = inventoryItems.some((item) => item.name && item.name.toLowerCase().includes("batje"));
+								if (hasPaddle) {
+									startPongGame(); // Start de minigame
+								} else {
+									showNotification("Om te kunnen tafeltennissen moet je een batje in je inventaris hebben!");
+								}
+							} else if (activeInteractionButton.obj.name === "Winkel") {
+								openShopWindow(activeInteractionButton.obj);
+							} else if (
+								activeInteractionButton.obj.name.includes("Container") ||
+								activeInteractionButton.obj.name.includes("Prullenbak")
+							) {
+								openContainerWindow(activeInteractionButton.obj);
+							}
+							return;
+						}
+					}
+
+					if (e.button === 0) {
+						// Linkermuisknop
+						// --- Logica voor verslepen van 'moveable' objecten (buiten bouwmodus) ---
+						if (!isBuildMode) {
+							const { x, y } = toTile(e.clientX, e.clientY);
+							const objectToDragIndex = objects.findIndex((o) => {
+								const w = o.flipped ? o.depth || 1 : o.width || 1;
+								const d = o.flipped ? o.width || 1 : o.depth || 1;
+								return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d && o.moveable;
+							});
+
+							if (objectToDragIndex > -1) {
+								// Sla de staat van de vensters op VOORDAT ze gesloten worden
+								windowStatesBeforeDrag = {
+									chat: document.getElementById("chatLog").style.display,
+									inventory: document.getElementById("inventory").style.display,
+									build: document.getElementById("buildMenu").style.display,
+									shop: document.getElementById("shopWindow").style.display,
+									container: document.getElementById("containerWindow").style.display,
+								};
+								closeAllWindows(); // Sluit alle vensters bij het oppakken van een object
+								draggedObject = objects.splice(objectToDragIndex, 1)[0];
+								draggedObjectOriginalPos = { x: draggedObject.x, y: draggedObject.y };
+								camOriginalPos = { x: camX, y: camY }; // Sla de huidige camera positie op
+								isObjectDragging = true; // Start de sleep-modus voor het object
+								camSmooth = false; // Stop eventuele smooth-beweging
+								return;
+							}
+
+							// --- Logica voor het oppakken van items ---
+							const itemToPickIndex = items.findIndex((item) => {
+								const itemTileX = Math.floor(item.x);
+								const itemTileY = Math.floor(item.y);
+								return itemTileX === x && itemTileY === y;
+							});
+
+							if (itemToPickIndex > -1) {
+								// Sla de staat van de vensters op
+								windowStatesBeforeDrag = {
+									chat: document.getElementById("chatLog").style.display,
+									inventory: document.getElementById("inventory").style.display,
+									build: document.getElementById("buildMenu").style.display,
+									shop: document.getElementById("shopWindow").style.display,
+									container: document.getElementById("containerWindow").style.display,
+								};
+								closeAllWindows(); // Sluit andere vensters
+
+								// Start de sleep-modus voor het item
+								draggedItem = items.splice(itemToPickIndex, 1)[0];
+								draggedItemOriginalPos = { x: draggedItem.x, y: draggedItem.y };
+								isItemDragging = true;
+								isDraggingFromInventory = false; // Komt uit de wereld
+								isDraggingFromShop = false;
+								isDraggingFromContainer = false;
+								camSmooth = false;
+
+								// Maak een tijdelijk DOM-element aan dat de muis volgt
+								dragImageElement = document.createElement("img");
+								dragImageElement.src = draggedItem.image.src;
+								dragImageElement.style.position = "absolute";
+								dragImageElement.style.pointerEvents = "none"; // Zodat we erdoorheen kunnen klikken/hoveren
+								dragImageElement.style.zIndex = "9999"; // Boven alles
+								dragImageElement.style.imageRendering = "pixelated";
+								const w = (draggedItem.image.width || 64) * scale;
+								const h = (draggedItem.image.height || 64) * scale;
+								dragImageElement.style.width = w + "px";
+								dragImageElement.style.left = e.clientX - w / 2 + "px";
+								dragImageElement.style.top = e.clientY - h / 2 + "px";
+								document.body.appendChild(dragImageElement);
+
+								// Open de inventaris zodat de gebruiker de optie heeft om het item daarheen te slepen
+								inventory.style.display = "flex";
+								document.querySelector("#inventoryBtn img").src = "icons/inventory_active.png";
+								renderInventoryItems();
+								console.log("Item vastgepakt!", draggedItem);
+								e.preventDefault(); // Voorkom "ghost image" van de canvas (fotokopie effect)
+								return; // Stop verdere acties na het oppakken
+							}
+						}
+						// Sla de startpositie op voor een mogelijke klik-actie (geen drag)
+						dragStart.x = e.clientX;
+						dragStart.y = e.clientY;
+					}
+					// Sla de startpositie op voor een mogelijke klik-actie (geen drag) - Ook voor rechtermuisknop
+					dragStart.x = e.clientX;
+					dragStart.y = e.clientY;
+					if (e.button === 2) {
+						// Rechtermuisknop
+						camStart.x = camX;
+						camStart.y = camY;
+						isCameraDragging = true; // Start camera slepen
+						camSmooth = false;
+					}
+				});
+
+				window.addEventListener("mouseup", (e) => {
+					// Als we hier komen, was het geen object-sleep, dus het kan een klik zijn
+					// of een drag die geen object betrof.
+
+					const dx = e.clientX - dragStart.x;
+					const dy = e.clientY - dragStart.y;
+
+					// --- Afhandeling van het loslaten van een versleept item ---
+					if (isItemDragging && e.button === 0) {
+						// Safety check: als draggedItem om een of andere reden null is, stop dan.
+						if (!draggedItem) {
+							isItemDragging = false;
+							return;
+						}
+
+						if (dragImageElement) {
+							dragImageElement.remove();
+							dragImageElement = null;
+						}
+
+						const { x, y } = toTile(e.clientX, e.clientY);
+						const inventory = document.getElementById("inventory");
+						const containerWindow = document.getElementById("containerWindow");
+						let droppedInInventory = false;
+
+						// Als we vanuit de inventaris slepen, check dan EERST de container.
+						// Dit voorkomt dat het item terug in de inventaris valt als de vensters overlappen.
+						if (
+							isDraggingFromInventory &&
+							!droppedInInventory &&
+							containerWindow &&
+							containerWindow.style.display === "flex" &&
+							openContainer
+						) {
+							const containerRect = containerWindow.getBoundingClientRect();
+							const isOverContainer =
+								e.clientX >= containerRect.left &&
+								e.clientX <= containerRect.right &&
+								e.clientY >= containerRect.top &&
+								e.clientY <= containerRect.bottom;
+
+							if (isOverContainer) {
+								// Bereken positie in container
+								const contentRect = document.getElementById("containerContent").getBoundingClientRect();
+								draggedItem.conX = e.clientX - contentRect.left - 50;
+								draggedItem.conY = e.clientY - contentRect.top - 50;
+								openContainer.items.push(draggedItem);
+								renderContainerItems();
+								droppedInInventory = true;
+							}
+						}
+
+						if (inventory && inventory.style.display === "flex") {
+							const inventoryRect = inventory.getBoundingClientRect();
+							const isOverInventory =
+								e.clientX >= inventoryRect.left &&
+								e.clientX <= inventoryRect.right &&
+								e.clientY >= inventoryRect.top &&
+								e.clientY <= inventoryRect.bottom;
+
+							if (isOverInventory) {
+								if (draggedItem.type === "currency" || draggedItem.type === "currency_big") {
+									let amount = 0;
+									if (draggedItem.type === "currency") {
+										// Random bedrag tussen 0.05 en 20.00 in stappen van 0.05
+										const steps = Math.floor(Math.random() * 400) + 1; // 1 tot 400
+										amount = steps * 0.05;
+									} else {
+										// Random bedrag tussen 25.00 en 100.00 in stappen van 0.05
+										const steps = Math.floor(Math.random() * 1501); // 0 tot 1500 (75 / 0.05)
+										amount = 25 + steps * 0.05;
+									}
+
+									addToWallet(amount);
+									console.log("Geld toegevoegd:", amount.toFixed(2));
+								} else {
+									// Bereken positie in inventaris op basis van muis
+									const contentRect = document.getElementById("inventoryContent").getBoundingClientRect();
+									draggedItem.invX = e.clientX - contentRect.left - 50; // Centreer op muis (100/2)
+									draggedItem.invY = e.clientY - contentRect.top - 50;
+
+									inventoryItems.push(draggedItem);
+									renderInventoryItems();
+									console.log("Item in inventaris geplaatst:", draggedItem);
+								}
+								droppedInInventory = true;
+							}
+						}
+
+						if (!droppedInInventory) {
+							const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
+							const isOccupiedByObject = isBlocked(x, y);
+							const isOccupiedByItem = isItemOccupied(x, y);
+							const isValidPlacement =
+								x >= 0 && x < mapW && y >= 0 && y < mapH && !isOccupiedByObject && !playerOnTile && !isOccupiedByItem;
+
+							if (isValidPlacement) {
+								draggedItem.x = x + 0.5;
+								draggedItem.y = y + 0.5;
+
+								// BONUS: Laat het item stuiteren bij plaatsen
+								draggedItem.z = 60; // Start hoogte (pixels)
+								draggedItem.vz = 0; // Start snelheid
+
+								items.push(draggedItem);
+								console.log("Item teruggeplaatst op kaart:", draggedItem);
+							} else {
+								// Als de plaatsing ongeldig is:
+								if (isDraggingFromInventory) {
+									// Terug naar inventaris als het daar vandaan kwam
+									inventoryItems.push(draggedItem);
+									renderInventoryItems();
+								} else if (isDraggingFromShop) {
+									// Terug naar winkel uitgifte
+									shopOutputItems.push(draggedItem);
+									renderShopOutput();
+								} else if (isDraggingFromContainer && openContainer) {
+									// Terug naar container
+									openContainer.items.push(draggedItem);
+									renderContainerItems();
+								} else {
+									// Terug naar oude plek in de wereld
+									draggedItem.x = draggedItemOriginalPos.x;
+									draggedItem.y = draggedItemOriginalPos.y;
+									items.push(draggedItem);
+								}
+								console.log("Ongeldige plaatsing, item teruggezet.");
+							}
+						}
+
+						// Reset alle sleep-gerelateerde variabelen voor items
+						isItemDragging = false;
+						isDraggingFromInventory = false;
+						isDraggingFromShop = false;
+						isDraggingFromContainer = false;
+						draggedItem = null;
+						draggedItemOriginalPos = null;
+
+						// Heropen de vensters die open stonden
+						if (windowStatesBeforeDrag) {
+							if (windowStatesBeforeDrag.chat) document.getElementById("chatLog").style.display = windowStatesBeforeDrag.chat;
+							// We laten de inventory open als die al open was, of als we er iets in hebben gesleept.
+							if (windowStatesBeforeDrag.inventory === "flex" || droppedInInventory) {
+								if (inventory) {
+									inventory.style.display = "flex";
+									document.querySelector("#inventoryBtn img").src = "icons/inventory_active.png";
+								}
+							} else {
+								if (inventory) {
+									inventory.style.display = "none";
+									document.querySelector("#inventoryBtn img").src = "icons/inventory.png";
+								}
+							}
+							if (windowStatesBeforeDrag.build === "flex") {
+								if (!isBuildMode) buildBtn.click();
+							}
+							if (windowStatesBeforeDrag.shop === "flex") {
+								document.getElementById("shopWindow").style.display = "flex";
+							}
+							if (windowStatesBeforeDrag.container === "flex") {
+								document.getElementById("containerWindow").style.display = "flex";
+							}
+							windowStatesBeforeDrag = null;
+						}
+						return; // Belangrijk: stop verdere uitvoering
+					}
+
+					// Stop met herschikken in inventaris
+					if (isRearrangingInventory) {
+						isRearrangingInventory = false;
+						activeInventoryItem = null;
+					}
+
+					if (isRearrangingContainer) {
+						isRearrangingContainer = false;
+						activeContainerItem = null;
+					}
+
+					// Voor de volgende acties (bouwen, lopen) moet de muis op het canvas zijn
+					if (e.target !== canvas) return;
+
+					// Als we in bouwmodus zijn en het een klik was, handel de tool-actie af
+					if (e.button === 0 && isBuildMode && Math.sqrt(dx * dx + dy * dy) < 5) {
+						// Alleen uitvoeren bij linkermuisknop
+						const { x, y } = toTile(e.clientX, e.clientY);
+
+						// Plaatsen kan op een tegel (x/y >= 0) of op een muur (hoverTarget.type === 'wall')
+						if (activeBuildCategory === "objecten" && ((x >= 0 && y >= 0) || hoverTarget?.type === "wall")) {
+							// Check geldigheid voor plaatsing (rekening houdend met width/depth)
+							const checkPlacement = (bx, by, obj, flipped) => {
+								const w = flipped ? obj.depth || 1 : obj.width || 1;
+								const d = flipped ? obj.width || 1 : obj.depth || 1;
+								for (let dx = 0; dx < w; dx++) {
+									for (let dy = 0; dy < d; dy++) {
+										const tx = bx + dx;
+										const ty = by + dy;
+										if (
+											tx >= mapW ||
+											ty >= mapH ||
+											isBlocked(tx, ty) ||
+											isItemOccupied(tx, ty) ||
+											(Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)
+										)
+											return false;
+									}
+								}
+								return true;
+							};
+
+							// --- Object Tool Logica ---
+							switch (buildTool) {
+								case "place":
+									if (selectedBuildObject?.placement === "floor" && selectedBuildObject.name) {
+										if (checkPlacement(x, y, selectedBuildObject, isBuildObjectFlipped)) {
+											objects.push({ ...selectedBuildObject, x: x, y: y, flipped: isBuildObjectFlipped });
+										}
+									} else if (selectedBuildObject?.placement === "wall" && hoverTarget?.type === "wall") {
+										const wallId = hoverTarget.id; // De ID van de muur waar we op klikken
+										const isWallOccupied = wallObjects.some((wo) => wo.wallId === wallId);
+										if (!isWallOccupied) {
+											wallObjects.push({ wallId: wallId, name: selectedBuildObject.name, flipped: isBuildObjectFlipped });
+										}
+									}
+									break;
+								case "move":
+									if (movingObject) {
+										if (checkPlacement(x, y, movingObject, movingObject.flipped)) {
+											movingObject.x = x;
+											movingObject.y = y;
+											objects.push(movingObject); // Voeg terug toe aan de lijst
+											movingObject = null; // Stop met verplaatsen
+										}
+									} else {
+										// Anders, pak een object op
+										const objectToMoveIndex = objects.findIndex((o) => {
+											const w = o.flipped ? o.depth || 1 : o.width || 1;
+											const d = o.flipped ? o.width || 1 : o.depth || 1;
+											return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+										});
+										if (objectToMoveIndex > -1) {
+											movingObject = objects.splice(objectToMoveIndex, 1)[0];
+											closeSecondaryWindows(); // Sluit andere vensters bij het oppakken
+											isBuildObjectFlipped = movingObject.flipped; // Synchroniseer de rotatie-status
+										}
+									}
+									break;
+								case "delete":
+								case "adminDelete":
+									const objectToDeleteIndex = objects.findIndex((o) => {
+										const w = o.flipped ? o.depth || 1 : o.width || 1;
+										const d = o.flipped ? o.width || 1 : o.depth || 1;
+										return x >= o.x && x < o.x + w && y >= o.y && y < o.y + d;
+									});
+									if (objectToDeleteIndex > -1) {
+										objects.splice(objectToDeleteIndex, 1);
+									} else if (hoverTarget?.type === "wall") {
+										const wallObjectToDeleteIndex = wallObjects.findIndex((wo) => wo.wallId === hoverTarget.id);
+										if (wallObjectToDeleteIndex > -1) {
+											wallObjects.splice(wallObjectToDeleteIndex, 1);
+										}
+									} else {
+										const itemToDeleteIndex = items.findIndex((item) => Math.floor(item.x) === x && Math.floor(item.y) === y);
+										if (itemToDeleteIndex > -1) {
+											items.splice(itemToDeleteIndex, 1);
+										}
+									}
+									break;
+							}
+						} else if (activeBuildCategory === "kleur") {
+							// --- Kleur Tool Logica ---
+							if (hoverTarget) {
+								if (colorTool === "brush") {
+									if (hoverTarget.type === "tile") {
+										const tileKey = `${hoverTarget.id.x},${hoverTarget.id.y}`;
+										tileColors[tileKey] = selectedColor;
+									} else if (hoverTarget.type === "wall") {
+										wallColors[hoverTarget.id] = selectedColor;
+									}
+								} else if (colorTool === "bucket") {
+									const startNode = hoverTarget;
+
+									const getTargetColor = (node) => {
+										if (node.type === "tile") {
+											return tileColors[`${node.id.x},${node.id.y}`] || "#444";
+										}
+										const defaultColor = node.id.startsWith("top") ? "#555" : "#666";
+										return wallColors[node.id] || defaultColor;
+									};
+
+									const targetColor = getTargetColor(startNode);
+
+									if (targetColor === selectedColor) return; // Voorkom oneindige loops
+
+									const queue = [startNode];
+									const visited = new Set();
+									visited.add(JSON.stringify(startNode.id)); // Gebruik JSON.stringify voor unieke keys
+
+									while (queue.length > 0) {
+										const current = queue.shift();
+
+										// Kleur het huidige element
+										if (current.type === "tile") {
+											tileColors[`${current.id.x},${current.id.y}`] = selectedColor;
+										} else {
+											wallColors[current.id] = selectedColor;
+										}
+
+										// Vind buren
+										let neighbors = [];
+										if (current.type === "tile") {
+											const { x, y } = current.id;
+											neighbors = [
+												{ type: "tile", id: { x: x + 1, y: y } },
+												{ type: "tile", id: { x: x - 1, y: y } },
+												{ type: "tile", id: { x: x, y: y + 1 } },
+												{ type: "tile", id: { x: x, y: y - 1 } },
+											].filter((n) => n.id.x >= 0 && n.id.x < mapW && n.id.y >= 0 && n.id.y < mapH);
+										} else {
+											// Wall
+											const [type, indexStr] = current.id.split("_");
+											const index = parseInt(indexStr);
+											neighbors = [
+												{ type: "wall", id: `${type}_${index + 1}` },
+												{ type: "wall", id: `${type}_${index - 1}` },
+											].filter((n) => {
+												const i = parseInt(n.id.split("_")[1]);
+												const max = type === "top" ? mapW : mapH;
+												return i >= 0 && i < max;
+											});
+										}
+
+										for (const neighbor of neighbors) {
+											const neighborIdStr = JSON.stringify(neighbor.id);
+											if (!visited.has(neighborIdStr)) {
+												visited.add(neighborIdStr);
+												if (getTargetColor(neighbor) === targetColor) {
+													queue.push(neighbor);
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+						return; // Bouwactie afgehandeld, stop verdere uitvoering
+					}
+
+					// Als het een klik was (niet een sleep) en niet in bouwmodus, start dan spelerbeweging
+					if (e.button === 0 && Math.sqrt(dx * dx + dy * dy) < 5 && !isBuildMode) {
+						// Alleen uitvoeren bij linkermuisknop
+						const { x, y } = toTile(e.clientX, e.clientY);
+						if (x >= 0 && x < mapW && y >= 0 && y < mapH && !isBlocked(x, y)) {
+							const startTile = { x: Math.floor(ball.x), y: Math.floor(ball.y) };
+							path = findPath(startTile, { x, y });
+							highlightedPath = [...path]; // Kopieer het pad voor highlighting
+
+							if (!jumping && path.length > 0) {
+								jumpStart = { x: ball.x, y: ball.y }; // voet als start
+								const next = path.shift();
+								jumpEnd = { x: next.x + 0.5, y: next.y + 0.5 }; // voet op midden tegel
+								jumpProgress = 0;
+								jumping = true;
+							}
+						}
+					}
+				});
+
+				// Reset alle dragging states bij mouseleave
+				canvas.addEventListener("mouseleave", (e) => {
+					isCameraDragging = false;
+					isObjectDragging = false;
+					// Item dragging wordt niet gereset bij mouseleave, zodat we naar de inventory kunnen slepen
+				});
+
+				// Rechtermuisklik om bouwselectie te annuleren
+				canvas.addEventListener("contextmenu", (e) => {
+					e.preventDefault(); // Voorkom altijd het browser context menu op de canvas
+
+					// Bepaal of het een klik was (geen sleepbeweging)
+					const dx = e.clientX - dragStart.x;
+					const dy = e.clientY - dragStart.y;
+					const isClick = Math.sqrt(dx * dx + dy * dy) < 5 && !isCameraDragging; // Voeg check toe voor camera dragging
+
+					// Voer de annuleer-actie alleen uit als het een 'klik' was en geen 'drag'
+					if (isClick) {
+						if (isBuildMode && selectedBuildObject) {
+							selectedBuildObject = null;
+							const selectedItem = document.querySelector(".build-item.selected");
+							if (selectedItem) {
+								selectedItem.classList.remove("selected");
+								isBuildObjectFlipped = false;
+							}
+						}
+						if (isBuildMode && movingObject) {
+							objects.push(movingObject); // Zet het object terug
+							movingObject = null;
+						}
+						// NIEUW: Annuleer item slepen met rechtermuisklik
+						if (isItemDragging && draggedItem) {
+							if (dragImageElement) {
+								dragImageElement.remove();
+								dragImageElement = null;
+							}
+
+							if (isDraggingFromInventory) {
+								inventoryItems.push(draggedItem);
+								renderInventoryItems();
+							} else {
+								draggedItem.x = draggedItemOriginalPos.x;
+								draggedItem.y = draggedItemOriginalPos.y;
+								items.push(draggedItem); // Zet item terug
+							}
+							isItemDragging = false;
+							isDraggingFromInventory = false;
+							if (isDraggingFromShop) {
+								shopOutputItems.push(draggedItem);
+								renderShopOutput();
+							}
+							if (isDraggingFromContainer && openContainer) {
+								openContainer.items.push(draggedItem);
+								renderContainerItems();
+							}
+							draggedItem = null;
+							draggedItemOriginalPos = null;
+							// Heropen de vensters die open stonden
+							if (windowStatesBeforeDrag) {
+								if (windowStatesBeforeDrag.chat) document.getElementById("chatLog").style.display = windowStatesBeforeDrag.chat;
+								if (windowStatesBeforeDrag.inventory) document.getElementById("inventory").style.display = windowStatesBeforeDrag.inventory;
+								if (windowStatesBeforeDrag.build === "flex") {
+									buildBtn.click();
+								}
+								if (windowStatesBeforeDrag.shop === "flex") {
+									document.getElementById("shopWindow").style.display = "flex";
+								}
+								windowStatesBeforeDrag = null;
+							}
+						}
+					}
+				});
+
+				// ─────────────────────────────────────────────
+				// 🏪 WINKEL LOGICA
+				// ─────────────────────────────────────────────
+				const shopCatalog = [
+					{ name: "Blok", image: itemImg, price: 5.0, mass: 1.2 },
+					{ name: "Bal", image: itemRoundImg, price: 5.0, mass: 0.8, canRotate: true },
+					{ name: "Stok", image: itemStickImg, price: 2.5, mass: 0.4, canTopple: true },
+					{ name: "Batje Rood", image: batjeRoodImg, price: 15.0, mass: 0.4, canTopple: true },
+					{ name: "Batje Zwart", image: batjeZwartImg, price: 15.0, mass: 0.4, canTopple: true },
+				];
+
+				let currentOpenShop = null;
+
+				function openShopWindow(shopObj) {
+					currentOpenShop = shopObj;
+					const shopWindow = document.getElementById("shopWindow");
+					shopWindow.style.display = "flex";
+					renderShopItems();
+					renderShopOutput();
+
+					// Open ook de inventory voor gemak
+					inventory.style.display = "flex";
+					document.querySelector("#inventoryBtn img").src = "icons/inventory_active.png";
+					renderInventoryItems();
+				}
+
+				document.getElementById("closeShopBtn").addEventListener("click", () => {
+					document.getElementById("shopWindow").style.display = "none";
+					currentOpenShop = null;
+				});
+
+				function renderShopItems() {
+					const content = document.getElementById("shopContent");
+					content.innerHTML = "";
+
+					shopCatalog.forEach((item) => {
+						const div = document.createElement("div");
+						div.className = "build-item"; // Hergebruik stijl
+						div.style.height = "auto";
+						div.style.minHeight = "90px";
+						div.innerHTML = `
+            <img src="${item.image.src}" style="height: 48px; object-fit: contain;">
+            <div style="text-align:center;">
+                <div>${item.name}</div>
+                <div style="color: #4cd137; font-weight: bold;">€${item.price.toFixed(2)}</div>
+            </div>
+        `;
+
+						div.onclick = () => buyItem(item);
+						content.appendChild(div);
+					});
+				}
+
+				function buyItem(template) {
+					if (walletBalance >= template.price) {
+						addToWallet(-template.price);
+
+						// Maak een nieuw item aan
+						const newItem = {
+							...template, // Kopieer eigenschappen
+							x: 0,
+							y: 0,
+							vx: 0,
+							vy: 0,
+							z: 0,
+							vz: 0,
+							rotation: 0,
+							vr: 0,
+						};
+
+						shopOutputItems.push(newItem);
+						renderShopOutput();
+					} else {
+						showNotification("Niet genoeg geld!");
+					}
+				}
+
+				function renderShopOutput() {
+					const output = document.getElementById("shopOutput");
+					output.innerHTML = "";
+
+					shopOutputItems.forEach((item, index) => {
+						const div = document.createElement("div");
+						div.className = "inventory-item";
+						div.style.width = "64px";
+						div.style.height = "64px";
+						div.innerHTML = `<img src="${item.image.src}">`;
+
+						div.addEventListener("mousedown", (e) => {
+							e.preventDefault();
+							if (e.button === 0) {
+								// Haal uit shop output
+								shopOutputItems.splice(index, 1);
+								renderShopOutput();
+
+								// Start slepen
+								draggedItem = item;
+								isItemDragging = true;
+								isDraggingFromShop = true;
+								isDraggingFromInventory = false;
+								draggedItemOriginalPos = null;
+
+								// Visueel element
+								dragImageElement = document.createElement("img");
+								dragImageElement.src = draggedItem.image.src;
+								dragImageElement.style.position = "absolute";
+								dragImageElement.style.pointerEvents = "none";
+								dragImageElement.style.zIndex = "9999";
+								dragImageElement.style.imageRendering = "pixelated";
+								const w = (draggedItem.image.width || 64) * scale;
+								const h = (draggedItem.image.height || 64) * scale;
+								dragImageElement.style.width = w + "px";
+								dragImageElement.style.left = e.clientX - w / 2 + "px";
+								dragImageElement.style.top = e.clientY - h / 2 + "px";
+								document.body.appendChild(dragImageElement);
+							}
+						});
+
+						output.appendChild(div);
+					});
+				}
+
+				// Sleep logica voor shop header
+				const shopWindow = document.getElementById("shopWindow");
+				const shopHeader = document.getElementById("shopHeader");
+				let isDraggingShop = false;
+				let dragStartShop = { x: 0, y: 0 };
+				let shopStartPos = { x: 0, y: 0 };
+
+				shopHeader.addEventListener("mousedown", (e) => {
+					bringToFront(shopWindow);
+					isDraggingShop = true;
+					dragStartShop = { x: e.clientX, y: e.clientY };
+					const rect = shopWindow.getBoundingClientRect();
+					// Reset transform voor absoluut slepen
+					shopWindow.style.transform = "none";
+					shopWindow.style.left = rect.left + "px";
+					shopWindow.style.top = rect.top + "px";
+					shopStartPos = { x: rect.left, y: rect.top };
+				});
+
+				// Zoom knoppen
+				document.getElementById("zoomIn").addEventListener("click", () => {
+					if (currentZoomIndex < zoomLevels.length - 1) {
+						currentZoomIndex++;
+						scale = zoomLevels[currentZoomIndex];
+					}
+				});
+				document.getElementById("zoomOut").addEventListener("click", () => {
+					if (currentZoomIndex > 0) {
+						currentZoomIndex--;
+						scale = zoomLevels[currentZoomIndex];
+					}
+				});
+
+				let scaleTarget = 1; // Definieer scaleTarget buiten de center knop
+
+				// Center knop
+				document.getElementById("centerCam").addEventListener("click", () => {
+					camTargetX = 0;
+					camTargetY = 0;
+					currentZoomIndex = 2; // Index voor neutraal zoomlevel (1.0)
+					scaleTarget = zoomLevels[currentZoomIndex];
+					camSmooth = true;
+				});
+
+				const setupStatefulButton = (btn, normalIcon, activeIcon) => {
+					if (!btn) return;
+					const img = btn.querySelector("img");
+					if (!img) return;
+
+					btn.addEventListener("mousedown", () => {
+						img.src = activeIcon;
+					});
+
+					const resetIcon = () => {
+						img.src = normalIcon;
+					};
+					btn.addEventListener("mouseup", resetIcon);
+					btn.addEventListener("mouseleave", resetIcon);
+				};
+
+				setupStatefulButton(document.getElementById("zoomIn"), "icons/max.png", "icons/max_active.png");
+				setupStatefulButton(document.getElementById("zoomOut"), "icons/min.png", "icons/min_active.png");
+				setupStatefulButton(document.getElementById("centerCam"), "icons/center.png", "icons/center_active.png");
+
+				function updateCamera(delta) {
+					if (!camSmooth || delta === 0) return;
+					let dx = camTargetX - camX;
+					let dy = camTargetY - camY;
+					let distance = Math.sqrt(dx * dx + dy * dy);
+					let t = Math.min(0.08 * delta, distance * 0.01);
+					camX += dx * t;
+					camY += dy * t;
+
+					// Smooth zoom
+					let ds = scaleTarget - scale;
+					scale += ds * 0.08 * delta;
+
+					if (distance < 0.3 && Math.abs(ds) < 0.01) {
+						camX = camTargetX;
+						camY = camTargetY;
+						scale = scaleTarget;
+						currentZoomIndex = zoomLevels.indexOf(scaleTarget); // Synchroniseer de index
+						camSmooth = false;
+					}
+				}
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingShop) return;
+
+					const dx = e.clientX - dragStartShop.x;
+					const dy = e.clientY - dragStartShop.y;
+
+					const newX = Math.max(0, Math.min(shopStartPos.x + dx, window.innerWidth - shopWindow.offsetWidth));
+					const newY = Math.max(0, Math.min(shopStartPos.y + dy, window.innerHeight - shopWindow.offsetHeight));
+
+					shopWindow.style.left = newX + "px";
+					shopWindow.style.top = newY + "px";
+				});
+
+				// ─────────────────────────────────────────────
+				// 📦 CONTAINER LOGICA
+				// ─────────────────────────────────────────────
+				let openContainer = null; // Het container object dat momenteel open is
+
+				function openContainerWindow(obj) {
+					openContainer = obj;
+					// Initialiseer items array als die nog niet bestaat
+					if (!openContainer.items) {
+						openContainer.items = [];
+					}
+
+					const containerWindow = document.getElementById("containerWindow");
+					const containerTools = document.getElementById("containerTools");
+					const containerContent = document.getElementById("containerContent");
+
+					// Update de titel van het venster
+					containerWindow.querySelector("#containerHeader span").textContent = obj.name;
+
+					// Reset tools en content hoogte
+					containerTools.innerHTML = "";
+					containerTools.style.display = "none";
+					containerContent.style.height = "calc(100% - 36px)";
+
+					// Voeg prullenbak-knop toe indien nodig
+					if (obj.name.includes("Prullenbak")) {
+						containerTools.style.display = "flex";
+						containerContent.style.height = "calc(100% - 36px - 51px)"; // 36px header + 51px tools
+
+						const trashBtn = document.createElement("button");
+						trashBtn.className = "tool-btn";
+						trashBtn.style.background = "transparent";
+						trashBtn.style.border = "none";
+						trashBtn.title = "Leegmaken";
+
+						const trashIcon = document.createElement("img");
+						trashIcon.src = "icons/trash.png";
+						trashIcon.style.width = "24px";
+						trashIcon.style.height = "24px";
+
+						trashBtn.appendChild(trashIcon);
+
+						trashBtn.onclick = () => {
+							// Voer alleen actie uit als er items zijn om te verwijderen
+							if (openContainer && openContainer.items.length > 0) {
+								// Verander icoon naar 'actief'
+								trashIcon.src = "icons/trash_active.png";
+
+								// Leeg de items array
+								openContainer.items = [];
+
+								// Wacht even, dan her-render en zet icoon terug
+								setTimeout(() => {
+									renderContainerItems(); // Her-render de (nu lege) container
+									trashIcon.src = "icons/trash.png";
+								}, 200);
+							}
+						};
+						containerTools.appendChild(trashBtn);
+					}
+
+					// Check welk type container het is voor de grootte van het venster
+					if (obj.name === "Grote Container" || obj.name === "Brede Container" || obj.name === "Brede Prullenbak") {
+						containerWindow.style.width = "400px"; // Breder voor 3 kolommen
+						obj.columns = 3;
+					} else {
+						containerWindow.style.width = "260px"; // Standaard 2 kolommen
+						obj.columns = 2;
+					}
+
+					containerWindow.style.display = "flex";
+					renderContainerItems();
+
+					// Open ook de inventory voor gemak
+					inventory.style.left = "150px"; // Reset positie voor netheid
+					inventory.style.display = "flex";
+					document.querySelector("#inventoryBtn img").src = "icons/inventory_active.png";
+					renderInventoryItems();
+				}
+
+				document.getElementById("closeContainerBtn").addEventListener("click", () => {
+					document.getElementById("containerWindow").style.display = "none";
+					openContainer = null;
+				});
+
+				function renderContainerItems() {
+					if (!openContainer) return;
+					const content = document.getElementById("containerContent");
+					content.innerHTML = "";
+
+					const cols = openContainer.columns || 2; // Default naar 2 als niet ingesteld
+
+					openContainer.items.forEach((item, index) => {
+						const div = document.createElement("div");
+						div.className = "inventory-item";
+						const imgSrc = item.image ? item.image.src : "";
+
+						// Default positie als die er nog niet is
+						if (item.conX === undefined) {
+							item.conX = (index % cols) * 110 + 20;
+							item.conY = Math.floor(index / cols) * 110 + 20;
+						}
+
+						div.style.position = "absolute";
+						div.style.left = item.conX + "px";
+						div.style.top = item.conY + "px";
+						div.innerHTML = `<img src="${imgSrc}">`;
+
+						div.addEventListener("mousedown", (e) => {
+							// Breng item naar voorgrond
+							div.style.zIndex = ++highestContainerZ;
+
+							// Update array volgorde
+							const idx = openContainer.items.indexOf(item);
+							if (idx > -1) {
+								openContainer.items.push(openContainer.items.splice(idx, 1)[0]);
+							}
+
+							e.preventDefault();
+							if (e.button === 0) {
+								// Start met verplaatsen BINNEN de container
+								isRearrangingContainer = true;
+								activeContainerItem = item;
+
+								const rect = div.getBoundingClientRect();
+								containerDragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+								e.stopPropagation();
+							}
+						});
+						content.appendChild(div);
+					});
+				}
+
+				function updateItems(delta) {
+					const friction = 0.92; // Hoe snel items afremmen (dichter bij 1 is minder frictie)
+
+					items.forEach((item) => {
+						// Sla over als het item wordt versleept
+						if (item === draggedItem) return;
+
+						// Pas snelheid toe op positie
+						item.x += item.vx * delta;
+						item.y += item.vy * delta;
+
+						// Pas frictie toe op snelheid
+						item.vx *= friction;
+						item.vy *= friction;
+
+						// Stop beweging als de snelheid heel laag is om eindeloos glijden te voorkomen
+						if (Math.abs(item.vx) < 0.001) item.vx = 0;
+						if (Math.abs(item.vy) < 0.001) item.vy = 0;
+
+						// --- BONUS: Stuiter Logica (Z-as) ---
+						// Pas zwaartekracht toe als het item in de lucht is of snelheid heeft
+						if ((item.z && item.z > 0) || (item.vz && item.vz !== 0)) {
+							item.vz -= 2.0 * delta; // Zwaartekracht
+							item.z += item.vz * delta;
+
+							if (item.z < 0) {
+								item.z = 0;
+								item.vz *= -0.6; // Stuiter demping (hoeveel energie blijft over)
+								if (Math.abs(item.vz) < 2) item.vz = 0; // Stop met stuiteren bij lage snelheid
+							}
+						}
+
+						// --- Rotatie Logica ---
+						if (item.canRotate) {
+							item.rotation += item.vr * delta;
+							item.vr *= 0.95; // Wrijving op rotatie
+						}
+
+						// --- Topple Logica (Omvallen) ---
+						if (item.canTopple) {
+							item.rotation += item.vr * delta;
+
+							// Zwaartekracht effect: trek naar +/- 90 graden (PI/2) als hij niet rechtop staat
+							if (Math.abs(item.rotation) < Math.PI / 2) {
+								// Hoe schuiner, hoe sneller hij valt (sinus van de hoek)
+								// We voegen een klein beetje 'wiebel' toe als hij bijna recht staat
+								item.vr += Math.sin(item.rotation) * 0.02 * delta;
+								item.vr *= 0.99; // Luchtweerstand
+							} else {
+								// Raakt de grond (clamp op 90 graden)
+								item.rotation = (Math.sign(item.rotation) * Math.PI) / 2;
+								item.vr *= -0.3; // Stuiter een beetje terug
+								if (Math.abs(item.vr) < 0.01) item.vr = 0; // Stop met stuiteren
+								item.vr *= 0.8; // Wrijving op de grond
+							}
+						}
+
+						// Simpele muur-collision
+						if (item.x < 0.5) {
+							item.x = 0.5;
+							item.vx *= -0.5;
+						}
+						if (item.x > mapW - 0.5) {
+							item.x = mapW - 0.5;
+							item.vx *= -0.5;
+						}
+						if (item.y < 0.5) {
+							item.y = 0.5;
+							item.vy *= -0.5;
+						}
+						if (item.y > mapH - 0.5) {
+							item.y = mapH - 0.5;
+							item.vy *= -0.5;
+						}
+					});
+				}
+
+				function updateBall(delta) {
+					// Snelheid van de sprong per seconde
+					const jumpSpeed = 3; // 3 tiles per second
+
+					if (!jumping && path.length > 0) {
+						// start van midden van tegel horizontaal, onderkant verticaal
+						jumpStart = {
+							x: Math.floor(ball.x) + 0.5,
+							y: Math.floor(ball.y) + 0.5, // onderkant op tegel
+						};
+						const next = path.shift();
+						jumpEnd = {
+							x: next.x + 0.5,
+							y: next.y + 0.5,
+						};
+						jumpProgress = 0;
+						jumping = true;
+					}
+
+					if (jumping) {
+						jumpProgress += (jumpSpeed / 60) * delta; // /60 omdat de oude snelheid 0.05 was (1/20)
+						if (jumpProgress >= 1) {
+							jumpProgress = 1;
+							ball.x = jumpEnd.x;
+							ball.y = jumpEnd.y;
+							jumping = false;
+							hopOffset = 0;
+							// Als het pad leeg is, maak de highlight leeg
+							if (path.length === 0) {
+								highlightedPath = [];
+							}
+
+							if (path.length > 0) {
+								jumpStart = { x: ball.x, y: ball.y };
+								const next = path.shift();
+								jumpEnd = { x: next.x + 0.5, y: next.y + 0.5 };
+								jumpProgress = 0;
+								jumping = true;
+							}
+						} else {
+							// interpolatie
+							ball.x = jumpStart.x + (jumpEnd.x - jumpStart.x) * jumpProgress;
+							ball.y = jumpStart.y + (jumpEnd.y - jumpStart.y) * jumpProgress;
+							hopOffset = jumpHeight * 4 * jumpProgress * (1 - jumpProgress);
+						}
+					} else hopOffset = 0;
+
+					// Speler-item collision
+					items.forEach((item) => {
+						// Sla over als het item wordt versleept
+						if (item === draggedItem) return;
+
+						const dx = item.x - ball.x;
+						const dy = item.y - ball.y;
+						const distance = Math.sqrt(dx * dx + dy * dy);
+						const minDistance = 0.6; // Hoe dichtbij de speler moet zijn om te duwen
+
+						if (distance < minDistance) {
+							const pushForce = 0.05 / item.mass; // Kracht van de duw, beïnvloed door massa
+							const angle = Math.atan2(dy, dx);
+							item.vx += Math.cos(angle) * pushForce;
+							item.vy += Math.sin(angle) * pushForce;
+
+							// Laat ronde items draaien als je ertegenaan loopt
+							if (item.canRotate) {
+								item.vr += (Math.random() - 0.5) * 0.5; // Geef een willekeurige draai
+							}
+
+							// Laat topple items omvallen als je ertegenaan loopt
+							if (item.canTopple) {
+								item.vr += (Math.random() - 0.5) * 0.2; // Geef een zetje om balans te verstoren
+							}
+						}
+					});
+
+					// --- Check afstand tot open interacties (Winkel / Container) ---
+					const shopWindow = document.getElementById("shopWindow");
+					const containerWindow = document.getElementById("containerWindow");
+					const maxDistance = 1.5; // Maximale afstand in tegels voordat venster sluit
+
+					// Check Winkel
+					if (shopWindow.style.display === "flex" && currentOpenShop) {
+						const dx = currentOpenShop.x - ball.x;
+						const dy = currentOpenShop.y - ball.y;
+						// Gebruik manhattan distance of euclidische afstand naar de rand van het object
+						// Simpele check: afstand tot het midden van het object
+						const dist = Math.sqrt(dx * dx + dy * dy);
+						if (dist > maxDistance + 1) {
+							// +1 marge voor de grootte van het object
+							document.getElementById("closeShopBtn").click(); // Gebruik de sluit-knop logica
+						}
+					}
+
+					// Check Container
+					if (containerWindow.style.display === "flex" && openContainer) {
+						const dx = openContainer.x - ball.x;
+						const dy = openContainer.y - ball.y;
+						const dist = Math.sqrt(dx * dx + dy * dy);
+						if (dist > maxDistance + 1) {
+							document.getElementById("closeContainerBtn").click(); // Gebruik de sluit-knop logica
+						}
+					}
+				}
+
+				let isDraggingChat = false;
+				let dragStartChat = { x: 0, y: 0 };
+				let chatStartPos = { x: 0, y: 0 };
+
+				chatLog.addEventListener("mousedown", (e) => {
+					bringToFront(chatLog);
+					isDraggingChat = true;
+					dragStartChat = { x: e.clientX, y: e.clientY };
+
+					// Voorkom dat de canvas een 'mousedown' event ontvangt als we op een UI-element klikken
+					if (e.target.closest("#chatLog")) {
+						e.stopPropagation();
+					}
+
+					const rect = chatLog.getBoundingClientRect();
+					chatStartPos = { x: rect.left, y: rect.top };
+					e.preventDefault();
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingChat) return;
+
+					const dx = e.clientX - dragStartChat.x;
+					const dy = e.clientY - dragStartChat.y;
+
+					const newX = chatStartPos.x + dx;
+					const newY = chatStartPos.y + dy;
+
+					const rect = chatLog.getBoundingClientRect();
+
+					const minX = 0;
+					const minY = 0;
+					const maxX = window.innerWidth - rect.width;
+					const maxY = window.innerHeight - rect.height;
+
+					chatLog.style.left = Math.max(minX, Math.min(newX, maxX)) + "px";
+					chatLog.style.top = Math.max(minY, Math.min(newY, maxY)) + "px";
+				});
+
+				buildMenu.addEventListener("mousedown", (e) => {
+					// Alleen slepen als we op de header klikken
+					if (!e.composedPath().includes(document.getElementById("buildMenuHeader"))) return;
+					bringToFront(buildMenu);
+
+					// Voorkom dat de canvas een 'mousedown' event ontvangt als we op een UI-element klikken
+					if (e.target.closest("#buildMenu")) {
+						e.stopPropagation();
+					}
+
+					isDraggingBuild = true;
+					dragStartBuild = { x: e.clientX, y: e.clientY };
+					const rect = buildMenu.getBoundingClientRect();
+					buildStartPos = { x: rect.left, y: rect.top };
+					e.preventDefault();
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingBuild) return;
+
+					const dx = e.clientX - dragStartBuild.x;
+					const dy = e.clientY - dragStartBuild.y;
+
+					const newX = Math.max(0, Math.min(buildStartPos.x + dx, window.innerWidth - buildMenu.offsetWidth));
+					const newY = Math.max(0, Math.min(buildStartPos.y + dy, window.innerHeight - buildMenu.offsetHeight));
+
+					buildMenu.style.left = newX + "px";
+					buildMenu.style.top = newY + "px";
+				});
+
+				inventory.addEventListener("mousedown", (e) => {
+					// Alleen slepen als we op de header klikken
+					if (!e.composedPath().includes(document.getElementById("inventoryHeader"))) return;
+					bringToFront(inventory);
+
+					// Voorkom dat de canvas een 'mousedown' event ontvangt als we op een UI-element klikken
+					if (e.target.closest("#inventory")) {
+						e.stopPropagation();
+					}
+
+					isDraggingInventory = true;
+					dragStartInventory = { x: e.clientX, y: e.clientY };
+					const rect = inventory.getBoundingClientRect();
+					inventoryStartPos = { x: rect.left, y: rect.top };
+					e.preventDefault();
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingInventory) return;
+
+					const dx = e.clientX - dragStartInventory.x;
+					const dy = e.clientY - dragStartInventory.y;
+
+					const newX = Math.max(0, Math.min(inventoryStartPos.x + dx, window.innerWidth - inventory.offsetWidth));
+					const newY = Math.max(0, Math.min(inventoryStartPos.y + dy, window.innerHeight - inventory.offsetHeight));
+
+					inventory.style.left = newX + "px";
+					inventory.style.top = newY + "px";
+				});
+
+				// Sleep logica voor container header
+				const containerWindow = document.getElementById("containerWindow");
+				const containerHeader = document.getElementById("containerHeader");
+				let isDraggingContainer = false;
+				let dragStartContainer = { x: 0, y: 0 };
+				let containerStartPos = { x: 0, y: 0 };
+
+				containerHeader.addEventListener("mousedown", (e) => {
+					bringToFront(containerWindow);
+					isDraggingContainer = true;
+					dragStartContainer = { x: e.clientX, y: e.clientY };
+					const rect = containerWindow.getBoundingClientRect();
+					containerWindow.style.left = rect.left + "px";
+					containerWindow.style.top = rect.top + "px";
+					containerStartPos = { x: rect.left, y: rect.top };
+					e.preventDefault();
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingContainer) return;
+
+					const dx = e.clientX - dragStartContainer.x;
+					const dy = e.clientY - dragStartContainer.y;
+					const newX = Math.max(0, Math.min(containerStartPos.x + dx, window.innerWidth - containerWindow.offsetWidth));
+					const newY = Math.max(0, Math.min(containerStartPos.y + dy, window.innerHeight - containerWindow.offsetHeight));
+					containerWindow.style.left = newX + "px";
+					containerWindow.style.top = newY + "px";
+				});
+
+				window.addEventListener("mouseup", (e) => {
+					// Als we een object aan het slepen waren, handel dat eerst af.
+					if (isObjectDragging) {
+						// De logica hiervoor is verplaatst naar de globale mouseup listener
+						// om te garanderen dat het altijd werkt.
+					}
+
+					// Stop met het slepen van UI-elementen
+					isDraggingChat = false;
+					isDraggingBuild = false;
+					isDraggingInventory = false;
+					isDraggingPong = false; // Stop pong slepen
+					isDraggingShop = false;
+					isDraggingContainer = false;
+
+					// Stop met het slepen van de camera (rechtermuisknop)
+					if (e.button === 2) {
+						isCameraDragging = false;
+					}
+
+					// Handel het loslaten van een gesleept object af, ongeacht waar de muis is
+					if (isObjectDragging && e.button === 0) {
+						// Alleen voor linkermuisknop
+						const { x, y } = toTile(e.clientX, e.clientY);
+						const playerOnTile = Math.floor(ball.x) === x && Math.floor(ball.y) === y;
+
+						// Check geldigheid (rekening houdend met width/depth)
+						const w = draggedObject.flipped ? draggedObject.depth || 1 : draggedObject.width || 1;
+						const d = draggedObject.flipped ? draggedObject.width || 1 : draggedObject.depth || 1;
+						let isValidPlacement = true;
+						for (let dx = 0; dx < w; dx++) {
+							for (let dy = 0; dy < d; dy++) {
+								const tx = x + dx;
+								const ty = y + dy;
+								if (tx >= mapW || ty >= mapH || isBlocked(tx, ty) || (Math.floor(ball.x) === tx && Math.floor(ball.y) === ty))
+									isValidPlacement = false;
+							}
+						}
+
+						if (isValidPlacement) {
+							draggedObject.x = x;
+							draggedObject.y = y;
+						} else {
+							// Plaats terug op de originele positie als de nieuwe plek ongeldig is
+							draggedObject.x = draggedObjectOriginalPos.x;
+							draggedObject.y = draggedObjectOriginalPos.y;
+						}
+						objects.push(draggedObject); // Voeg het object (terug) toe aan de wereld
+
+						// Reset alle sleep-gerelateerde variabelen
+						draggedObject = null;
+						draggedObjectOriginalPos = null;
+						isObjectDragging = false;
+
+						// Start het soepel terugkeren van de camera als deze was meebewogen
+						if (camOriginalPos) {
+							camTargetX = camOriginalPos.x;
+							camTargetY = camOriginalPos.y;
+							camSmooth = true;
+							camOriginalPos = null;
+						}
+
+						// Heropen de vensters die open stonden
+						if (windowStatesBeforeDrag) {
+							if (windowStatesBeforeDrag.chat) document.getElementById("chatLog").style.display = windowStatesBeforeDrag.chat;
+							if (windowStatesBeforeDrag.inventory) document.getElementById("inventory").style.display = windowStatesBeforeDrag.inventory;
+							// Voor het bouwmenu moeten we de 'isBuildMode' vlag correct zetten
+							if (windowStatesBeforeDrag.build === "flex") {
+								buildBtn.click(); // Simuleer een klik om de bouwmodus correct te heractiveren
+							}
+							windowStatesBeforeDrag = null; // Reset de opgeslagen staat
+						}
+						return; // Belangrijk: stop verdere uitvoering om te voorkomen dat de speler gaat lopen.
+					}
+
+					// Stop camera slepen met rechtermuisknop
+					if (isCameraDragging && e.button === 2) {
+						isCameraDragging = false;
+					}
+				});
+
+				// --- Sleep Logica voor Pong Game ---
+				const pongGame = document.getElementById("pongGame");
+				const pongHeader = document.getElementById("pongHeader");
+				let isDraggingPong = false;
+				let dragStartPong = { x: 0, y: 0 };
+				let pongStartPos = { x: 0, y: 0 };
+
+				pongHeader.addEventListener("mousedown", (e) => {
+					if (pongRunning) return; // Niet slepen tijdens het spelen
+					if (e.target.closest(".close-btn")) return; // Niet slepen als we op sluiten klikken
+
+					isDraggingPong = true;
+					dragStartPong = { x: e.clientX, y: e.clientY };
+
+					// Omdat pongGame standaard gecentreerd is met transform, moeten we dit omzetten naar absolute posities
+					// bij de eerste keer slepen, anders verspringt hij.
+					const rect = pongGame.getBoundingClientRect();
+					pongGame.style.transform = "none"; // Verwijder de centrering
+					pongGame.style.left = rect.left + "px";
+					pongGame.style.top = rect.top + "px";
+
+					pongStartPos = { x: rect.left, y: rect.top };
+					e.preventDefault();
+				});
+
+				window.addEventListener("mousemove", (e) => {
+					if (!isDraggingPong) return;
+
+					const dx = e.clientX - dragStartPong.x;
+					const dy = e.clientY - dragStartPong.y;
+
+					const newX = Math.max(0, Math.min(pongStartPos.x + dx, window.innerWidth - pongGame.offsetWidth));
+					const newY = Math.max(0, Math.min(pongStartPos.y + dy, window.innerHeight - pongGame.offsetHeight));
+
+					pongGame.style.left = newX + "px";
+					pongGame.style.top = newY + "px";
+				});
+
+				// Initieel renderen van de bouw-items (ook al is het menu verborgen)
+				renderBuildItems();
+
+				setInterval(() => {
+					const active = chatMessages.filter((m) => Date.now() - m.time < m.duration).sort((a, b) => a.time - b.time);
+
+					if (active.length >= 5) {
+						const oldest = active[0];
+						const remaining = Math.max(0, Math.ceil((oldest.duration - (Date.now() - oldest.time)) / 1000));
+
+						chatInput.disabled = true;
+						chatInput.value = "";
+						chatInput.placeholder = `Even wachten (${remaining}s)`;
+					} else {
+						chatInput.disabled = false;
+						chatInput.placeholder = "Typ hier je bericht...";
+						chatInput.style.color = "#000";
+					}
+				}, 250);
+
+				function loop(time) {
+					// Bereken delta in fractie van een 60fps frame voor compatibiliteit
+					const deltaTime = time - lastTime;
+					const delta = deltaTime / (1000 / 60); // delta is ~1.0 bij 60fps
+					lastTime = time;
+
+					// Reset transform naar fysieke pixels (inclusief DPR)
+					ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+					ctx.imageSmoothingEnabled = false; // Standaard voor de hele frame: scherpe pixels
+
+					// --- Camera pan tijdens slepen van object ---
+					if (isObjectDragging) {
+						// Gebruik de nieuwe variabele
+						const panZone = 100; // De grootte van de zone aan de randen van het scherm
+						const panSpeed = 5 * delta;
+
+						if (mousePos.x < panZone) camX += panSpeed;
+						if (mousePos.x > window.innerWidth - panZone) camX -= panSpeed;
+						if (mousePos.y < panZone) camY += panSpeed;
+						if (mousePos.y > window.innerHeight - panZone) camY -= panSpeed;
+
+						// Update de target voor als we stoppen met slepen
+						camOriginalPos.x = camX;
+						camOriginalPos.y = camY;
+					}
+					// --- Einde camera pan ---
+
+					// Clear het hele scherm (gebruik logische coordinaten omdat dpr in transform zit)
+					ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+					ctx.setTransform(scale * dpr, 0, 0, scale * dpr, (window.innerWidth / 2 + camX) * dpr, (window.innerHeight / 4 + camY) * dpr);
+
+					drawTiles();
+					drawTopWall();
+					drawLeftWall();
+					updateItems(delta); // Update de positie en snelheid van de items
+					updateBall(delta); // delta meegeven
+
+					// --- Dieptegesorteerde renderlijst ---
+					const renderList = [];
+					let playerAdded = false;
+					const playerTileX = Math.floor(ball.x);
+					const playerTileY = Math.floor(ball.y);
+
+					// Voeg objecten toe aan de renderlijst
+					objects.forEach((obj) => {
+						const w = obj.flipped ? obj.depth || 1 : obj.width || 1;
+						const d = obj.flipped ? obj.width || 1 : obj.depth || 1;
+
+						// Genereer dynamisch de lijst met tegels die "achter" dit object liggen
+						// Dit zijn de tegels direct ten noorden (y-1) en westen (x-1) van de bounding box
+						let behindTiles = [];
+
+						// Rij boven het object
+						for (let i = 0; i < w; i++) {
+							behindTiles.push({ x: obj.x + i, y: obj.y - 1 });
+						}
+						// Kolom links van het object
+						for (let j = 0; j < d; j++) {
+							behindTiles.push({ x: obj.x - 1, y: obj.y + j });
+						}
+						// De hoek linksboven
+						behindTiles.push({ x: obj.x - 1, y: obj.y - 1 });
+
+						// Voor hoge objecten voegen we extra tegels toe (simpele benadering)
+						if (obj.height === 2) {
+							behindTiles.push({ x: obj.x - 1, y: obj.y - 2 }); // Twee boven, een links (209)
+							behindTiles.push({ x: obj.x - 2, y: obj.y - 2 }); // Twee boven, twee links (208)
+							behindTiles.push({ x: obj.x - 2, y: obj.y - 1 }); // Een boven, twee links (233)
+						}
+
+						// Check of speler achter het object staat OF in het object staat (voor tile 106/131 etc)
+						const isPlayerBehind = behindTiles.some((t) => playerTileX === t.x && playerTileY === t.y);
+						const isPlayerInside = playerTileX >= obj.x && playerTileX < obj.x + w && playerTileY >= obj.y && playerTileY < obj.y + d;
+
+						// Check of een item achter het object staat
+						const isItemBehind = items.some((item) => {
+							const itemTileX = Math.floor(item.x);
+							const itemTileY = Math.floor(item.y);
+							return behindTiles.some((t) => itemTileX === t.x && itemTileY === t.y);
+						});
+
+						// Bepaal de sorteersleutel op basis van het midden van het object voor betere sortering
+						const sortKey = obj.x + (w - 1) / 2 + (obj.y + (d - 1) / 2);
+
+						// Voeg het object toe aan de lijst
+						renderList.push({
+							type: "object",
+							// We gebruiken nu een expliciete sortKey ipv x/y
+							sortKey: sortKey,
+							x: obj.x, // Voor debug/referentie
+							y: obj.y, // Voor debug/referentie
+							draw: () => {
+								const centerX = obj.x + (w - 1) / 2;
+								const centerY = obj.y + (d - 1) / 2;
+								const { sx, sy } = toScreen(centerX, centerY);
+								// Maak object transparant als de speler erachter staat OF erin staat
+								ctx.globalAlpha = isPlayerBehind || isPlayerInside || isItemBehind ? 0.5 : 1;
+
+								const isTall = obj.height === 2;
+								const isWide = obj.width === 2; // Check voor brede objecten
+								let finalImg;
+
+								if (obj.runtimeImage) {
+									finalImg = obj.runtimeImage;
+								} else if (obj.name === "Pong") {
+									finalImg = pongImg;
+								} else if (obj.name === "Winkel") {
+									finalImg = winkelImg;
+								} else if (obj.name === "Container") {
+									finalImg = containerImg;
+								} else if (obj.name === "Prullenbak") {
+									finalImg = trashImg;
+								} else if (obj.name === "Brede Prullenbak") {
+									finalImg = trashImg96B;
+								} else if (obj.name === "Grote Container") {
+									finalImg = containerImg96;
+								} else if (obj.name === "Brede Container") {
+									finalImg = containerImg96B;
+								} else if (obj.name === "Prullenbak") {
+									finalImg = trashImg;
+								} else if (obj.name === "Brede Prullenbak") {
+									finalImg = trashImg96B;
+								} else if (obj.moveable) {
+									finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
+								} else {
+									if (isWide) {
+										finalImg = objectImg96B;
+									} else if (isTall) {
+										finalImg = objectImg96;
+									} else {
+										finalImg = objectImg;
+									}
+								}
+
+								const imgWidth = finalImg.width || 64; // Gebruik de werkelijke breedte
+								const imgHeight = finalImg.height || (isTall ? 96 : 64); // Gebruik de werkelijke hoogte
+
+								if (obj.flipped) {
+									ctx.save();
+									ctx.scale(-1, 1);
+								}
+
+								// Bereken de verticale offset op basis van de dimensies zodat het object netjes op de vloer staat
+								const totalDim = (obj.width || 1) + (obj.depth || 1);
+								const verticalOffset = totalDim * 8 + 16;
+
+								ctx.drawImage(
+									finalImg,
+									obj.flipped ? -sx - imgWidth / 2 : sx - imgWidth / 2, // horizontaal centreren op basis van breedte
+									sy - imgHeight + verticalOffset, // Dynamische verticale correctie
+									imgWidth, // Gebruik dynamische breedte
+									imgHeight // Gebruik dynamische hoogte
+								);
+								ctx.globalAlpha = 1;
+								if (obj.flipped) {
+									ctx.restore();
+								}
+							},
+						});
+					});
+
+					// Voeg items toe aan de renderlijst
+					items.forEach((item) => {
+						// Sla over als het item wordt versleept, want die wordt apart getekend
+						if (item === draggedItem) return;
+
+						renderList.push({
+							type: "item",
+							sortKey: Math.floor(item.x) + Math.floor(item.y),
+							draw: () => {
+								const { sx, sy } = toScreen(item.x, item.y);
+
+								// Bereken de tekenpositie inclusief de stuiter-hoogte (z)
+								const drawY = sy - (item.z || 0);
+
+								ctx.save();
+								// Verplaats naar het midden van waar het item getekend moet worden
+								ctx.translate(sx, drawY);
+								// Roteer als het item dat kan
+								if (item.canRotate) {
+									ctx.rotate(item.rotation || 0);
+									ctx.drawImage(
+										item.image,
+										-item.image.width / 2, // Teken gecentreerd op het rotatiepunt
+										-item.image.height / 2
+									);
+								} else if (item.canTopple) {
+									ctx.rotate(item.rotation || 0);
+									ctx.drawImage(
+										item.image,
+										-item.image.width / 2, // Horizontaal gecentreerd
+										-item.image.height // Verticaal: ankerpunt onderaan
+									);
+								} else {
+									ctx.drawImage(item.image, -item.image.width / 2, -item.image.height / 2);
+								}
+								ctx.restore();
+							},
+						});
+					});
+
+					// Voeg de speler toe aan de renderlijst
+					renderList.push({
+						type: "player",
+						sortKey: playerTileX + playerTileY,
+						draw: drawBall,
+					});
+
+					// Voeg de bouw-preview toe aan de renderlijst voor correcte diepte
+					const objectToPreview = (selectedBuildObject?.placement === "floor" && selectedBuildObject) || movingObject || draggedObject;
+					if (objectToPreview && hoverCell) {
+						// Check geldigheid (rekening houdend met width/depth)
+						const isFlipped = objectToPreview === selectedBuildObject ? isBuildObjectFlipped : objectToPreview.flipped || false;
+						const w = isFlipped ? objectToPreview.depth || 1 : objectToPreview.width || 1;
+						const d = isFlipped ? objectToPreview.width || 1 : objectToPreview.depth || 1;
+						let isValidPlacement = true;
+						for (let dx = 0; dx < w; dx++) {
+							for (let dy = 0; dy < d; dy++) {
+								const tx = hoverCell.x + dx;
+								const ty = hoverCell.y + dy;
+								if (
+									tx >= mapW ||
+									ty >= mapH ||
+									isBlocked(tx, ty) ||
+									isItemOccupied(tx, ty) ||
+									(Math.floor(ball.x) === tx && Math.floor(ball.y) === ty)
+								) {
+									isValidPlacement = false;
+								}
+							}
+						}
+
+						if (isValidPlacement) {
+							renderList.push({
+								type: "preview",
+								sortKey: hoverCell.x + (w - 1) / 2 + (hoverCell.y + (d - 1) / 2),
+								draw: () => {
+									const centerX = hoverCell.x + (w - 1) / 2;
+									const centerY = hoverCell.y + (d - 1) / 2;
+									const { sx, sy } = toScreen(centerX, centerY);
+									const isTall = objectToPreview.height === 2;
+									const isWide = objectToPreview.width === 2;
+									let finalImg;
+
+									if (objectToPreview.runtimeImage) {
+										finalImg = objectToPreview.runtimeImage;
+									} else if (objectToPreview.name === "Pong") {
+										finalImg = pongImg;
+									} else if (objectToPreview.name === "Winkel") {
+										finalImg = winkelImg;
+									} else if (objectToPreview.name === "Container") {
+										finalImg = containerImg;
+									} else if (objectToPreview.name === "Grote Container") {
+										finalImg = containerImg96;
+									} else if (objectToPreview.name === "Brede Container") {
+										finalImg = containerImg96B;
+									} else if (objectToPreview.name === "Prullenbak") {
+										finalImg = trashImg;
+									} else if (objectToPreview.name === "Brede Prullenbak") {
+										finalImg = trashImg96B;
+									} else if (objectToPreview.moveable) {
+										finalImg = isWide ? moveableObjectImg96B : moveableObjectImg;
+									} else {
+										if (isWide) {
+											finalImg = objectImg96B;
+										} else if (isTall) {
+											finalImg = objectImg96;
+										} else {
+											finalImg = objectImg;
+										}
+									}
+
+									const imgWidth = finalImg.width || 64;
+									const imgHeight = finalImg.height || (isTall ? 96 : 64);
+
+									const totalDim = (objectToPreview.width || 1) + (objectToPreview.depth || 1);
+									const verticalOffset = totalDim * 8 + 16;
+
+									ctx.globalAlpha = 0.7; // Maak de preview half-transparant
+									if (isFlipped) {
+										ctx.save();
+										ctx.scale(-1, 1);
+									}
+									ctx.drawImage(
+										finalImg,
+										isFlipped ? -sx - imgWidth / 2 : sx - imgWidth / 2,
+										sy - imgHeight + verticalOffset,
+										imgWidth,
+										imgHeight
+									);
+
+									if (isFlipped) {
+										ctx.restore();
+									}
+
+									ctx.globalAlpha = 1; // Reset alpha
+								},
+							});
+						}
+					}
+
+					// Sorteer op x+y voor isometrische diepte
+					renderList.sort((a, b) => a.sortKey - b.sortKey);
+
+					// Alles tekenen
+					for (let item of renderList) {
+						item.draw();
+					}
+					// --- Einde renderlijst ---
+
+					drawInteractionPrompts(); // Teken interactie prompts bovenop de wereld
+					drawChatBallon();
+					updateCamera(delta); // delta meegeven
+
+					requestAnimationFrame(loop);
+				}
+
+				requestAnimationFrame(loop); // Start de loop
+			})(); // Einde van de IIFE
+		</script>
+		>>>>>>> main
+	</body>
 </html>
